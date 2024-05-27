@@ -16,6 +16,7 @@
 #include "SoundManager.h"
 #include "Sound.h"
 #include "UIPanel.h"
+#include "CameraComponent.h"
 
 DevScene::DevScene()
 {
@@ -133,7 +134,16 @@ void DevScene::Init()
 
 	{
 		Player* player = new Player();
-		AddActor(player);
+		//AddActor(player);
+		avatar = player;
+		avatar->id = 0;
+		CameraComponent* camera = new CameraComponent();
+		player->AddComponent(camera);
+	}
+
+	{
+		players[0] = new Player();
+		players[0]->id = 1;
 	}
 
 	{
@@ -197,6 +207,7 @@ bool DevScene::CanGo(VectorInt cellPos)
 
 Vector DevScene::ConvertPos(VectorInt cellPos)
 {
+	// 셀 좌표를 통해 다음 위치를 정한다.
 	Vector ret = {};
 
 	if (_tilemapActor == nullptr)

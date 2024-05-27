@@ -8,12 +8,15 @@
 //#include "BoxCollider.h"
 #include "SceneManager.h"
 #include "DevScene.h"
-
+#include <iostream>
 Player::Player()
 {
+	int a = sizeof(Player);
 	_hp = 50;
 	_exp = 100;
 	_level = 1;
+	_speed.x = 150;
+	_speed.y = 150;
 
 	_flipbookIdle[DIR_UP] = GET_SINGLE(ResourceManager)->GetFlipbook(L"FB_IdleUp");
 	_flipbookIdle[DIR_DOWN] = GET_SINGLE(ResourceManager)->GetFlipbook(L"FB_IdleDown");
@@ -30,8 +33,7 @@ Player::Player()
 	_flipbookAttack[DIR_LEFT] = GET_SINGLE(ResourceManager)->GetFlipbook(L"FB_AttackLeft");
 	_flipbookAttack[DIR_RIGHT] = GET_SINGLE(ResourceManager)->GetFlipbook(L"FB_AttackRight");
 
-	CameraComponent* camera = new CameraComponent();
-	AddComponent(camera);
+
 }
 
 Player::~Player()
@@ -92,6 +94,7 @@ void Player::Render(HDC hdc)
 
 void Player::TickIdle()
 {
+	if (id != 0) return;
 	float deltaTime = GET_SINGLE(TimeManager)->GetDeltaTime();
 
 	_keyPressed = true;
@@ -99,7 +102,6 @@ void Player::TickIdle()
 
 	if (GET_SINGLE(InputManager)->GetButton(KeyType::W))
 	{
-		
 		SetDir(DIR_UP);
 
 		VectorInt nextPos = _cellPos + deltaXY[_dir];
@@ -157,7 +159,7 @@ void Player::TickMove()
 	float deltaTime = GET_SINGLE(TimeManager)->GetDeltaTime();
 
 	Vector dir = (_destPos - _pos);
-	if (dir.Length() < 10.f)
+	if (dir.Length() < 6.25f)
 	{
 		SetState(PlayerState::Idle);
 		_pos = _destPos;
@@ -167,16 +169,16 @@ void Player::TickMove()
 		switch (_dir)
 		{
 		case DIR_UP:
-			_pos.y -= 200 * deltaTime;
+			_pos.y -= _speed.y * deltaTime;
 			break;
 		case DIR_DOWN:
-			_pos.y += 200 * deltaTime;
+			_pos.y += _speed.y * deltaTime;
 			break;
 		case DIR_LEFT:
-			_pos.x -= 200 * deltaTime;
+			_pos.x -= _speed.x * deltaTime;
 			break;
 		case DIR_RIGHT:
-			_pos.x += 200 * deltaTime;
+			_pos.x += _speed.x * deltaTime;
 			break;
 		}
 	}

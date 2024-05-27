@@ -1,0 +1,80 @@
+#pragma once
+constexpr int PORT_NUM = 4000;
+constexpr int BUF_SIZE = 200;
+constexpr int MAX_USER = 17000;
+constexpr int NUM_NPC = 200000;
+
+constexpr int NAME_SIZE = 20;
+constexpr int CHAT_SIZE = 100;
+
+constexpr int W_WIDTH = 400;
+constexpr int W_HEIGHT = 400;
+
+enum OBJECT_VISUAL { VI_AVATAR, VI_PLAYER, VI_NPC };
+
+enum class CS_PACKET_ID { 
+	CS_LOGIN, 
+	CS_MOVE 
+};
+
+enum class SC_PACKET_ID { 
+	SC_LOGIN_INFO, 
+	SC_ADD_PLAYER, 
+	SC_REMOVE_PLAYER, 
+	SC_MOVE_PLAYER, 
+	SC_CHAT
+};
+
+#pragma pack (push, 1)
+struct CS_LOGIN_PACKET {
+	unsigned char size;
+	char	type;
+	char	name[NAME_SIZE];
+};
+
+struct CS_MOVE_PACKET {
+	unsigned char size;
+	char	type;
+	char	direction;  // 0 : UP, 1 : DOWN, 2 : LEFT, 3 : RIGHT
+	unsigned	move_time;
+};
+
+struct SC_LOGIN_INFO_PACKET {
+	unsigned char size;
+	char	type;
+	char	visual;
+	int	id;
+	short	x, y;
+};
+
+struct SC_ADD_PLAYER_PACKET {
+	unsigned char size;
+	char	type;
+	int		id;
+	char	visual;
+	short	x, y;
+	char	name[NAME_SIZE];
+};
+
+struct SC_REMOVE_PLAYER_PACKET {
+	unsigned char size;
+	char	type;
+	int		id;
+};
+
+struct SC_MOVE_PLAYER_PACKET {
+	unsigned char size;
+	char	type;
+	int		id;
+	short	x, y;
+	unsigned int move_time;
+};
+
+struct  SC_CHAT_PACKET
+{
+	unsigned char size;
+	char	type;
+	int		id;
+	char	mess[CHAT_SIZE];
+};
+#pragma pack (pop)

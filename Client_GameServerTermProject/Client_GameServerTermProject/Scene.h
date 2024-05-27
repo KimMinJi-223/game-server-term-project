@@ -1,4 +1,5 @@
 #pragma once
+#include "Player.h"
 
 class Actor;
 class UI;
@@ -20,5 +21,9 @@ public:
 public:
 	vector<Actor*> _actors[LAYER_MAXCOUNT];
 	vector<UI*> _uis;
+
+	Player* avatar;
+	unordered_map <int, Player*> players;
+
 };
 

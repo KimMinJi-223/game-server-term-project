@@ -26,6 +26,10 @@ void Scene::Init()
 	{
 		ui->BeginPlay();
 	}
+	for (auto p : players)
+		p.second->BeginPlay();
+
+	avatar->BeginPlay();
 }
 
 void Scene::Update()
@@ -46,6 +50,11 @@ void Scene::Update()
 	{
 		ui->Tick();
 	}
+
+	for (auto p : players)
+		p.second->Tick();
+
+	avatar->Tick();
 }
 
 void Scene::Render(HDC hdc)
@@ -60,6 +69,11 @@ void Scene::Render(HDC hdc)
 	{
 		ui->Render(hdc);
 	}
+
+	for (auto p : players)
+		p.second->Render(hdc);
+
+	avatar->Render(hdc);
 }
 
 void Scene::AddActor(Actor* actor)

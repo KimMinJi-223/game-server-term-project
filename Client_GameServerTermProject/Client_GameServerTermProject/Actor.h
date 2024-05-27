@@ -1,5 +1,4 @@
 #pragma once
-
 class Component;
 class Collider;
 
@@ -31,5 +30,5 @@ protected:
 	Vector _destPos = { 0, 0 };
 	LAYER_TYPE _layer = LAYER_OBJECT;
 	vector<Component*> _components;
-	int _hp;
+	int _hp = 100;
 };

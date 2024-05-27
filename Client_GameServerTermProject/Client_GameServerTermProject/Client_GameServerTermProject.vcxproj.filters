@@ -22,6 +22,9 @@
     <Filter Include="manager">
       <UniqueIdentifier>{523d051e-ebc5-4260-ba7a-d2985e8f2bab}</UniqueIdentifier>
     </Filter>
+    <Filter Include="creature">
+      <UniqueIdentifier>{c8e8eba9-d8d4-433e-ada0-e9c964df8a06}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -78,19 +81,7 @@
     <ClInclude Include="Scene.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Actor.h">
-      <Filter>소스 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Player.h">
-      <Filter>소스 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="SpriteActor.h">
-      <Filter>소스 파일</Filter>
-    </ClInclude>
     <ClInclude Include="TilemapActor.h">
-      <Filter>소스 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="FlipbookActor.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
     <ClInclude Include="CameraComponent.h">
@@ -129,6 +120,24 @@
     <ClInclude Include="InputManager.h">
       <Filter>manager</Filter>
     </ClInclude>
+    <ClInclude Include="Actor.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="FlipbookActor.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Monster.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="SpriteActor.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkManager.h">
+      <Filter>manager</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -161,19 +170,7 @@
     <ClCompile Include="Scene.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Actor.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Player.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="SpriteActor.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="TilemapActor.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="FlipbookActor.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="CameraComponent.cpp">
@@ -213,6 +210,24 @@
       <Filter>manager</Filter>
     </ClCompile>
     <ClCompile Include="InputManager.cpp">
+      <Filter>manager</Filter>
+    </ClCompile>
+    <ClCompile Include="Actor.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="FlipbookActor.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Monster.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="SpriteActor.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkManager.cpp">
       <Filter>manager</Filter>
     </ClCompile>
   </ItemGroup>

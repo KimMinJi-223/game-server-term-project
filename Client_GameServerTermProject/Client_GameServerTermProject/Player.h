@@ -36,6 +36,8 @@ public:
 	bool CanGo(VectorInt cellPos);
 	void SetCellPos(VectorInt cellPos, bool teleport = false);
 
+	int id;
+
 private:
 	Flipbook* _flipbookIdle[4] = {};
 	Flipbook* _flipbookMove[4] = {};
@@ -49,5 +51,7 @@ private:
 
 	int _exp;
 	int _level;
+
+	
 };
 
