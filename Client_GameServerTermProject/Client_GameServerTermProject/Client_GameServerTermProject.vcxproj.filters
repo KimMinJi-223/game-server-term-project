@@ -135,8 +135,14 @@
     <ClInclude Include="SpriteActor.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
+    <ClInclude Include="PlayerController.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Server_GameServerTermProject\Server_GameServerTermProject\protocol.h">
+      <Filter>main</Filter>
+    </ClInclude>
     <ClInclude Include="NetworkManager.h">
-      <Filter>manager</Filter>
+      <Filter>main</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -227,8 +233,11 @@
     <ClCompile Include="SpriteActor.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="PlayerController.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
     <ClCompile Include="NetworkManager.cpp">
-      <Filter>manager</Filter>
+      <Filter>main</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

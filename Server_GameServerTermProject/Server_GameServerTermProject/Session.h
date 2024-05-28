@@ -17,7 +17,7 @@ private:
 	std::unordered_set <int> _view_list;
 	std::mutex	_vll;
 	int		_prev_remain;
-
+	bool _is_moving;
 public:
 	// 스트레스 테스트
 	int		_last_move_time;
@@ -31,12 +31,14 @@ public:
 	void do_send(void* packet);
 	void send_login_info_packet(OBJECT_VISUAL visual);
 	void send_add_player_packet(Object& c_id, char c_visual);
+	void send_move_packet(Object& other, char dir);
+	void send_remove_player_packet(int c_id);
 
 public:
 	int GetPrevRemain() { return _prev_remain; }
 	void SetPrevRemain(int prev) { _prev_remain = prev; }
 	void GetRefViewList(std::unordered_set<int>& view);
-	void send_move_packet(Object& other);
-	void send_remove_player_packet(int c_id);
+	bool GetIsMoving() { return _is_moving; }
+	void SetIsMoving(bool move) { _is_moving = move; }
 };
 

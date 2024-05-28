@@ -1,5 +1,6 @@
 #pragma once
 #include "Player.h"
+#include "PlayerController.h"
 
 class Actor;
 class UI;
@@ -18,6 +19,8 @@ public:
 	void AddActor(Actor* actor);
 	void RemoveActor(Actor* actor);
 
+	PlayerController* GetPlayerController() { return controller; }
+
 public:
 	vector<Actor*> _actors[LAYER_MAXCOUNT];
 	vector<UI*> _uis;
@@ -25,5 +28,7 @@ public:
 	Player* avatar;
 	unordered_map <int, Player*> players;
 
+private:
+	PlayerController* controller;
 };
 

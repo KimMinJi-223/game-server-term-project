@@ -18,6 +18,9 @@ public:
 
 	bool CanGo(VectorInt cellPos);
 	Vector ConvertPos(VectorInt cellPos);
+	
 
 	class TilemapActor* _tilemapActor = nullptr;
+
+
 };

@@ -65,4 +65,5 @@ private:
 private:
 	vector<KeyState> _states;
 	POINT _mousePos;
+	
 };

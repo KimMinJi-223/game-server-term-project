@@ -1,7 +1,7 @@
 #pragma once
+#include "pch.h"
 class Component;
 class Collider;
-
 class Actor
 {
 public:
@@ -18,6 +18,7 @@ public:
 	void SetLayer(LAYER_TYPE layer) { _layer = layer; }
 	LAYER_TYPE GetLayer() { return _layer; }
 
+	Vector GetDestPos() { return _destPos; }
 	void AddComponent(Component* component);
 	void RemoveComponent(Component* component);
 

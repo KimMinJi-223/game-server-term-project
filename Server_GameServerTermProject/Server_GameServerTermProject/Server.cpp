@@ -48,7 +48,7 @@ void Server::process_packet(int id, char* packet)
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 		Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
 		loginPlayer->SetName(p->name);
-		loginPlayer->SetPosition(rand() % W_WIDTH, rand() % W_HEIGHT);
+		loginPlayer->SetPosition(15, 5/*rand() % W_WIDTH, rand() % W_HEIGHT*/);
 		
 		Pos playerPos = loginPlayer->GetPosition();
 		int sectorId = (playerPos.x / SECTOR_SIZE) + ((playerPos.y / SECTOR_SIZE) * MULTIPLY_ROW);
@@ -118,13 +118,15 @@ void Server::process_packet(int id, char* packet)
 		short x = prevPos.x;
 		short y = prevPos.y;
 		switch (p->direction) {
-		case 0: if (y > 0) y--; break;
-		case 1: if (y < W_HEIGHT - 1) y++; break;
-		case 2: if (x > 0) x--; break;
-		case 3: if (x < W_WIDTH - 1) x++; break;
+		case DIR_UP: if (y > 0) y--; break;
+		case DIR_DOWN: if (y < W_HEIGHT - 1) y++; break;
+		case DIR_LEFT: if (x > 0) x--; break;
+		case DIR_RIGHT: if (x < W_WIDTH - 1) x++; break;
 		}
 		movePlayer->SetPosition(x, y);
+		movePlayer->SetIsMoving(true);
 
+		// 추가 : 타이머에 넣는 작업도 필요 (1초 후 또 이동하는 그런)
 
 		int sectorId = (x / SECTOR_SIZE) + ((y / SECTOR_SIZE) * MULTIPLY_ROW);
 
@@ -181,7 +183,7 @@ void Server::process_packet(int id, char* packet)
 			}
 		}
 
-		movePlayer->send_move_packet(*(objects[id]));
+		movePlayer->send_move_packet(*(objects[id]), p->direction);
 		// ADD_PLAYER
 		for (auto& cl : new_vl) {
 			Session* addPlayer = reinterpret_cast<Session*>(objects[cl]);
@@ -197,7 +199,7 @@ void Server::process_packet(int id, char* packet)
 			else {
 				// MOVE_PLAYER
 				if (false == addPlayer->GetIsNpc())
-					addPlayer->send_move_packet(*(objects[id]));
+					addPlayer->send_move_packet(*(objects[id]), p->direction);
 			}
 		}
 		// REMOVE_PLAYER
@@ -212,7 +214,16 @@ void Server::process_packet(int id, char* packet)
 		}
 
 	}
+	case CS_PACKET_ID::CS_MOVE_STOP: {
+		CS_MOVE_STOP_PACKET* p = reinterpret_cast<CS_MOVE_STOP_PACKET*>(packet);
+		reinterpret_cast<Session*>(objects[id])->SetIsMoving(false);
+		// move패킷을 보내는 타이머 이벤트의 경우 _is_moving이 true인지 확인해야함
 	}
+	default:
+		std::cout << "정체불명 패킷" << std::endl;
+		break;
+	}
+
 }
 
 void Server::WorkerThread()
@@ -243,6 +254,7 @@ void Server::WorkerThread()
 		switch (ex_over->_comp_type) {
 		case OP_ACCEPT: {
 			int client_id = get_new_client_id();
+			std::cout << "아이디 할당 : " << client_id << std::endl;
 			if (client_id != -1) {
 				{
 					std::lock_guard<std::mutex> ll(objects[client_id]->GetStateMutex());
@@ -263,7 +275,7 @@ void Server::WorkerThread()
 			break;
 		}
 		case OP_RECV: {
-			Session* player = reinterpret_cast<Session*>(objects[key]);
+ 			Session* player = reinterpret_cast<Session*>(objects[key]);
 			int remain_data = num_bytes + player->GetPrevRemain();
 			char* p = ex_over->_send_buf;
 			while (remain_data > 0) {

@@ -177,8 +177,8 @@ struct VectorInt
 		return x * other.y - y * other.x;
 	}
 
-	int32 x = 0;
-	int32 y = 0;
+	int16 x = 0;
+	int16 y = 0;
 };
 
 using Pos = Vector; ;

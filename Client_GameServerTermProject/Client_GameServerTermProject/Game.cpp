@@ -5,6 +5,9 @@
 #include "SceneManager.h"
 #include "ResourceManager.h"
 #include "SoundManager.h"
+#include "NetworkManager.h"
+#include "PlayerController.h"
+#include "Scene.h"
 
 Game::Game()
 {
@@ -33,6 +36,7 @@ void Game::Init(HWND hwnd, HINSTANCE hinst)
 	HBITMAP prev = (HBITMAP)::SelectObject(_hdcBack, _bmpBack);
 	::DeleteObject(prev);
 
+
 	GET_SINGLE(TimeManager)->Init();
 	GET_SINGLE(InputManager)->Init(hwnd);
 	GET_SINGLE(SceneManager)->Init();
@@ -42,10 +46,14 @@ void Game::Init(HWND hwnd, HINSTANCE hinst)
 	// 초기 씬 설정
 	GET_SINGLE(SceneManager)->ChangeScene(SceneType::DevScene);
 
+	GET_SINGLE(NetworkManager)->Init();
+	GET_SINGLE(SceneManager)->GetCurrentScene()->GetPlayerController()->Init();
 }
 
 void Game::Update()
 {
+	// 통신 
+	GET_SINGLE(NetworkManager)->Update();
 	// 현재 시간 계산
 	GET_SINGLE(TimeManager)->Update();
 	// 입력의 상태

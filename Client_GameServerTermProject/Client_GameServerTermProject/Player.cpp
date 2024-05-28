@@ -94,64 +94,15 @@ void Player::Render(HDC hdc)
 
 void Player::TickIdle()
 {
-	if (id != 0) return;
 	float deltaTime = GET_SINGLE(TimeManager)->GetDeltaTime();
 
-	_keyPressed = true;
-	VectorInt deltaXY[4] = { {0, -1}, {0, 1}, {-1, 0}, {1, 0} };
+	//_keyPressed = true;
+	//VectorInt deltaXY[4] = { {0, -1}, {0, 1}, {-1, 0}, {1, 0} };
 
-	if (GET_SINGLE(InputManager)->GetButton(KeyType::W))
-	{
-		SetDir(DIR_UP);
-
-		VectorInt nextPos = _cellPos + deltaXY[_dir];
-		if (CanGo(nextPos))
-		{
-			SetCellPos(nextPos);
-			SetState(PlayerState::Move);
-		}
-	}
-	else  if (GET_SINGLE(InputManager)->GetButton(KeyType::S))
-	{
-		SetDir(DIR_DOWN);
-
-		VectorInt nextPos = _cellPos + deltaXY[_dir];
-		if (CanGo(nextPos))
-		{
-			SetCellPos(nextPos);
-			SetState(PlayerState::Move);
-		}
-	}
-	else if (GET_SINGLE(InputManager)->GetButton(KeyType::A))
-	{
-		SetDir(DIR_LEFT);
-		VectorInt nextPos = _cellPos + deltaXY[_dir];
-		if (CanGo(nextPos))
-		{
-			SetCellPos(nextPos);
-			SetState(PlayerState::Move);
-		}
-	}
-	else if (GET_SINGLE(InputManager)->GetButton(KeyType::D))
-	{
-		SetDir(DIR_RIGHT);
-		VectorInt nextPos = _cellPos + deltaXY[_dir];
-		if (CanGo(nextPos))
-		{
-			SetCellPos(nextPos);
-			SetState(PlayerState::Move);
-		}
-	}
-	else if (GET_SINGLE(InputManager)->GetButton(KeyType::Q))
-	{
-			SetState(PlayerState::Skill);
-	}
-	else
-	{
-		_keyPressed = false;
-		if (_state == PlayerState::Idle)
-			UpdateAnimation();
-	}
+	//_keyPressed = false;
+	if (_state == PlayerState::Idle)
+		UpdateAnimation();
+	
 }
 
 void Player::TickMove()
@@ -242,8 +193,9 @@ bool Player::CanGo(VectorInt cellPos)
 
 void Player::SetCellPos(VectorInt cellPos, bool teleport)
 {
-	_cellPos = cellPos;
 
+	_cellPos = cellPos;
+	
 	DevScene* scene = dynamic_cast<DevScene*>(GET_SINGLE(SceneManager)->GetCurrentScene());
 	if (scene == nullptr)
 		return;

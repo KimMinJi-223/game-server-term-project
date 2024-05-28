@@ -12,10 +12,13 @@ Scene::Scene()
 
 Scene::~Scene()
 {
+	delete controller;
 }
 
 void Scene::Init()
 {
+	controller = new PlayerController();
+
 	for (const vector<Actor*>& actors : _actors)
 	{
 		for (Actor* actor : actors)
@@ -34,8 +37,9 @@ void Scene::Init()
 
 void Scene::Update()
 {
+	controller->Update();
 	// 이전 프레임에서 현재 프레임까지 경과된 시간 
-// 거리 = 시간 * 속도
+	// 거리 = 시간 * 속도
 	float deltaTime = GET_SINGLE(TimeManager)->GetDeltaTime();
 
 	//GET_SINGLE(CollisionManager)->Update();

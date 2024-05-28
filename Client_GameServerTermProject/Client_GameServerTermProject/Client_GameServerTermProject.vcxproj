@@ -128,6 +128,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Server_GameServerTermProject\Server_GameServerTermProject\protocol.h" />
     <ClInclude Include="Actor.h" />
     <ClInclude Include="Button.h" />
     <ClInclude Include="CameraComponent.h" />
@@ -146,6 +147,7 @@
     <ClInclude Include="Panel.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="PlayerController.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ResourceBase.h" />
     <ClInclude Include="ResourceManager.h" />
@@ -182,6 +184,7 @@
     <ClCompile Include="Panel.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="PlayerController.cpp" />
     <ClCompile Include="ResourceBase.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="Scene.cpp" />

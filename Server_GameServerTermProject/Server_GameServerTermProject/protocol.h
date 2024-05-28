@@ -12,9 +12,18 @@ constexpr int W_HEIGHT = 400;
 
 enum OBJECT_VISUAL { VI_AVATAR, VI_PLAYER, VI_NPC };
 
+enum Dir
+{
+	DIR_UP,
+	DIR_DOWN,
+	DIR_LEFT,
+	DIR_RIGHT,
+};
+
 enum class CS_PACKET_ID { 
 	CS_LOGIN, 
-	CS_MOVE 
+	CS_MOVE,
+	CS_MOVE_STOP
 };
 
 enum class SC_PACKET_ID { 
@@ -37,6 +46,11 @@ struct CS_MOVE_PACKET {
 	char	type;
 	char	direction;  // 0 : UP, 1 : DOWN, 2 : LEFT, 3 : RIGHT
 	unsigned	move_time;
+};
+
+struct CS_MOVE_STOP_PACKET {
+	unsigned char size;
+	char	type;
 };
 
 struct SC_LOGIN_INFO_PACKET {
@@ -67,6 +81,7 @@ struct SC_MOVE_PLAYER_PACKET {
 	char	type;
 	int		id;
 	short	x, y;
+	char	direction;
 	unsigned int move_time;
 };
 

@@ -133,17 +133,13 @@ void DevScene::Init()
 	}
 
 	{
+		// 플레이어 생성
 		Player* player = new Player();
 		//AddActor(player);
 		avatar = player;
 		avatar->id = 0;
 		CameraComponent* camera = new CameraComponent();
 		player->AddComponent(camera);
-	}
-
-	{
-		players[0] = new Player();
-		players[0]->id = 1;
 	}
 
 	{

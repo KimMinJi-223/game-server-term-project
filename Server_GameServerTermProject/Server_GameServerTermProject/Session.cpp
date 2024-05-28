@@ -5,6 +5,7 @@ void Session::Init(int x, int y, int id, const char* name, SOCKET socket)
 	Object::Init(x, y, id, name);
 	_prev_remain = 0;
 	_socket = socket;
+	_is_moving = false;
 }
 
 void Session::do_recv()
@@ -37,6 +38,7 @@ void Session::send_login_info_packet(OBJECT_VISUAL visual)
 
 void Session::send_add_player_packet(Object& other, char c_visual)
 {
+	printf("send_add_player_packet %d -> %d (%d, %d)\n", _id, other.GetId(), other.GetPosition().x, other.GetPosition().y);
 	int c_id = other.GetId();
 	_vll.lock();
 	if (0 != _view_list.count(c_id)) {
@@ -59,8 +61,10 @@ void Session::send_add_player_packet(Object& other, char c_visual)
 	do_send(&add_packet);
 }
 
-void Session::send_move_packet(Object& other)
+void Session::send_move_packet(Object& other, char dir)
 {
+	printf("send_move_packet %d \n", other.GetId());
+
 	SC_MOVE_PLAYER_PACKET p;
 	p.id = other.GetId();
 	p.size = sizeof(SC_MOVE_PLAYER_PACKET);
@@ -69,6 +73,7 @@ void Session::send_move_packet(Object& other)
 	Pos pos = other.GetPosition();
 	p.x = pos.x;
 	p.y = pos.y;
+	p.direction = dir;
 	p.move_time = static_cast<Session*>(&other)->_last_move_time;
 	do_send(&p);
 }
