@@ -11,12 +11,13 @@ public:
 	int prev_remain;
 	int myId;
 	Player* avatar;
-
+	HWND _hwnd;
 public:
-	void Init();
+	void Init(HWND hwnd);
 	void Update();
 
 	void ProcessPacket(char* p);
 	void process_data(size_t io_byte);
+	void SendChat(const char* message);
 };
 

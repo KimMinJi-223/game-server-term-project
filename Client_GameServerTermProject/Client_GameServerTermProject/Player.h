@@ -38,6 +38,7 @@ public:
 	void SetCellPos(VectorInt cellPos, bool teleport = false);
 
 	int id;
+	bool _keyPressed = false;
 
 private:
 	Flipbook* _flipbookIdle[4] = {};
@@ -48,7 +49,6 @@ private:
 	Vector _speed = {};
 	Dir _dir = DIR_DOWN;
 	PlayerState _state = PlayerState::Idle;
-	bool _keyPressed = false;
 
 	int _exp;
 	int _level;

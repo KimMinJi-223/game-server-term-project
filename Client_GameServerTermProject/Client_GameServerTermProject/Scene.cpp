@@ -63,6 +63,7 @@ void Scene::Update()
 
 void Scene::Render(HDC hdc)
 {
+	// 여기 ui를 분리해야함
 	for (const vector<Actor*>& actors : _actors)
 	{
 		for (Actor* actor : actors)

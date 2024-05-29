@@ -30,7 +30,7 @@ public:
 	void process_packet(int id, char* packet);
 	void WorkerThread();
 	void disconnect(int key);
-
+	void BroadCastChat(int id, char* packet);
 public:
 	int get_new_client_id();
 

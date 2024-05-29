@@ -23,6 +23,7 @@ enum Dir
 enum class CS_PACKET_ID { 
 	CS_LOGIN, 
 	CS_MOVE,
+	CS_CHAT,
 	CS_MOVE_STOP
 };
 
@@ -48,6 +49,11 @@ struct CS_MOVE_PACKET {
 	unsigned	move_time;
 };
 
+struct CS_CHAT_PACKET {
+	unsigned char size;
+	char	type;
+	char	mess[CHAT_SIZE];
+};
 struct CS_MOVE_STOP_PACKET {
 	unsigned char size;
 	char	type;

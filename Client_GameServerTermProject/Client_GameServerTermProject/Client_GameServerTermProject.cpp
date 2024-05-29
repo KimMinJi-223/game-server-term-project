@@ -4,6 +4,11 @@
 #include "framework.h"
 #include "Client_GameServerTermProject.h"
 #include "Game.h"
+#include "NetworkManager.h"
+#include <iostream>
+#include <locale>
+#include <codecvt>
+
 #define MAX_LOADSTRING 100
 
 // 전역 변수:
@@ -25,6 +30,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
+
+	std::wcout.imbue(std::locale("korean"));
 
     // TODO: 여기에 코드를 입력합니다.
 
@@ -145,7 +152,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	WCHAR word[1024];
+	wchar_t word[CHAT_SIZE / 2];
+	char multiText[CHAT_SIZE];
 
 	switch (message)
 	{
@@ -154,7 +162,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL, 0, 400, 300, 180, hWnd, (HMENU)1000,
 			hInst, NULL);
 		CreateWindow(TEXT("EDIT"), TEXT(""),
-			WS_CHILD | WS_VISIBLE | WS_BORDER, 0, 580, 200, 20, hWnd, (HMENU)2000,
+			WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL, 0, 580, 200, 20, hWnd, (HMENU)2000,
 			hInst, NULL);
 		CreateWindow(TEXT("BUTTON"), TEXT("BUTTON"),
 			WS_CHILD | WS_VISIBLE | WS_BORDER, 200, 580, 100, 20, hWnd, (HMENU)3000,
@@ -173,13 +181,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case 3000: // 버튼
 		{
 			//GetLocalTime(&st);
-			GetDlgItemText(hWnd, 2000, word, 256);
+			GetDlgItemText(hWnd, 2000, word, CHAT_SIZE / 2);
 			if (word[0] == '\0')
 				break;
+			WideCharToMultiByte(CP_ACP, 0, word, -1, multiText, sizeof(multiText), NULL, NULL);
+
 			HWND hListBox = GetDlgItem(hWnd, 1000);
 			SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)word);
 			SetDlgItemText(hWnd, 2000, TEXT(""));
 			SendMessage(hListBox, LB_SETCARETINDEX, (WPARAM)(SendMessage(hListBox, LB_GETCOUNT, 0, 0) - 1), 0);
+			GET_SINGLE(NetworkManager)->GetInstance()->SendChat(multiText);
 		}
 		break;
 

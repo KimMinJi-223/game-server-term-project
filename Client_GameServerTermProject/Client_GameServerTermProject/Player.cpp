@@ -15,8 +15,8 @@ Player::Player()
 	_hp = 50;
 	_exp = 100;
 	_level = 1;
-	_speed.x = 150;
-	_speed.y = 150;
+	_speed.x = 250;
+	_speed.y = 250;
 
 	_flipbookIdle[DIR_UP] = GET_SINGLE(ResourceManager)->GetFlipbook(L"FB_IdleUp");
 	_flipbookIdle[DIR_DOWN] = GET_SINGLE(ResourceManager)->GetFlipbook(L"FB_IdleDown");
@@ -114,6 +114,7 @@ void Player::TickMove()
 	{
 		SetState(PlayerState::Idle);
 		_pos = _destPos;
+		_keyPressed = false;
 	}
 	else
 	{

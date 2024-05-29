@@ -46,7 +46,7 @@ void Game::Init(HWND hwnd, HINSTANCE hinst)
 	// ÃÊ±â ¾À ¼³Á¤
 	GET_SINGLE(SceneManager)->ChangeScene(SceneType::DevScene);
 
-	GET_SINGLE(NetworkManager)->Init();
+	GET_SINGLE(NetworkManager)->Init(_hwnd);
 	GET_SINGLE(SceneManager)->GetCurrentScene()->GetPlayerController()->Init();
 }
 

@@ -30,6 +30,7 @@ void DevScene::Init()
 {
 	// 파일 불러오기
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Stage01", L"Sprite\\Map\\Stage01.bmp");
+	GET_SINGLE(ResourceManager)->LoadTexture(L"Stage03", L"Sprite\\Map\\Stage03.bmp");
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Tile", L"Sprite\\Map\\Tile.bmp", RGB(128, 128, 128));
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Sword", L"Sprite\\Item\\Sword.bmp");
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Potion", L"Sprite\\UI\\Mp.bmp");
@@ -42,7 +43,10 @@ void DevScene::Init()
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Exit", L"Sprite\\UI\\Exit.bmp");
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Pro", L"Sprite\\UI\\Pro.bmp");
 
+	GET_SINGLE(ResourceManager)->GetTexture(L"Stage03")->SetTransparent(RGB(0, 0, 0));
+
 	GET_SINGLE(ResourceManager)->CreateSprite(L"Stage01", GET_SINGLE(ResourceManager)->GetTexture(L"Stage01"));
+	GET_SINGLE(ResourceManager)->CreateSprite(L"Stage03", GET_SINGLE(ResourceManager)->GetTexture(L"Stage03"));
 	GET_SINGLE(ResourceManager)->CreateSprite(L"TileO", GET_SINGLE(ResourceManager)->GetTexture(L"Tile"), 0, 0, 48, 48);
 	GET_SINGLE(ResourceManager)->CreateSprite(L"TileX", GET_SINGLE(ResourceManager)->GetTexture(L"Tile"), 48, 0, 48, 48);
 	GET_SINGLE(ResourceManager)->CreateSprite(L"Start_Off", GET_SINGLE(ResourceManager)->GetTexture(L"Start"), 0, 0, 150, 150);
@@ -131,6 +135,20 @@ void DevScene::Init()
 
 		AddActor(background);
 	}
+
+	{
+		Sprite* sprite = GET_SINGLE(ResourceManager)->GetSprite(L"Stage03");
+
+		// 액터는 씬에 배치할 수 있는 것이다. 
+		SpriteActor* background = new SpriteActor();
+		background->SetSprite(sprite);
+		background->SetLayer(LAYER_UI);
+		const VectorInt size = sprite->GetSize();
+		background->SetPos(Vector(size.x / 2, size.y / 2));
+
+		AddActor(background);
+	}
+
 
 	{
 		// 플레이어 생성

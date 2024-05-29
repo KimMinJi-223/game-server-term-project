@@ -5,6 +5,7 @@
 
 int main()
 {
+	std::wcout.imbue(std::locale("korean"));
 	Server* server = new Server();
 	server->Init();
 

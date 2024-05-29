@@ -5,12 +5,14 @@
 #include "SceneManager.h"
 #include "Scene.h"
 #include "Actor.h"
+#include <string>
 
 #pragma comment(lib, "WS2_32.lib")
 #pragma comment(lib, "MSWSock.lib")
 
-void NetworkManager::Init()
+void NetworkManager::Init(HWND hwnd)
 {
+	_hwnd = hwnd;
 	avatar = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->avatar;
 
 	WSADATA WSAData;
@@ -53,13 +55,12 @@ void NetworkManager::Update()
 			exit(-1);
 	}
 
-	if(recvLen > 0)
+	if (recvLen > 0)
 		process_data(recvLen);
 }
 
 void NetworkManager::ProcessPacket(char* p)
 {
-	static bool first_time = true;
 	switch (p[1])
 	{
 	case static_cast<int>(SC_PACKET_ID::SC_LOGIN_INFO):
@@ -121,19 +122,19 @@ void NetworkManager::ProcessPacket(char* p)
 		}
 		break;
 	}*/
-	/*case static_cast<int>(SC_PACKET_ID::SC_CHAT):
+	case static_cast<int>(SC_PACKET_ID::SC_CHAT):
 	{
 		SC_CHAT_PACKET* my_packet = reinterpret_cast<SC_CHAT_PACKET*>(p);
-		int other_id = my_packet->id;
-		if (other_id == g_myid) {
-			avatar.set_chat(my_packet->mess);
-		}
-		else {
-			players[other_id].set_chat(my_packet->mess);
-		}
+		HWND hListBox = GetDlgItem(_hwnd, 1000);
+		wchar_t wchar[CHAT_SIZE / 2];
+		MultiByteToWideChar(CP_ACP, 0, my_packet->mess, -1, wchar, CHAT_SIZE / 2);
+		SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)wchar);
+		SetDlgItemText(_hwnd, 2000, TEXT(""));
+		SendMessage(hListBox, LB_SETCARETINDEX, (WPARAM)(SendMessage(hListBox, LB_GETCOUNT, 0, 0) - 1), 0);
+
 
 		break;
-	}*/
+	}
 	default:
 		printf("Unknown PACKET type [%d]\n", recvBuffer[1]);
 	}
@@ -156,4 +157,14 @@ void NetworkManager::process_data(size_t io_byte)
 	if (remain_data > 0) {
 		memcpy(recvBuffer, p, remain_data);
 	}
+}
+
+
+void NetworkManager::SendChat(const char* message)
+{
+	CS_CHAT_PACKET packet;
+	packet.size = strlen(message) + 2 + 1;
+	packet.type = static_cast<char>(CS_PACKET_ID::CS_CHAT);
+	memcpy_s(packet.mess, 100, message, 100);
+	send(socket, reinterpret_cast<char*>(&packet), packet.size, 0);
 }

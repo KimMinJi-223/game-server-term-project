@@ -212,7 +212,14 @@ void Server::process_packet(int id, char* packet)
 				movePlayer->send_remove_player_packet(cl);
 			}
 		}
-
+		break;
+	}
+	case CS_PACKET_ID::CS_CHAT: {
+		CS_CHAT_PACKET* p = reinterpret_cast<CS_CHAT_PACKET*>(packet);
+		for (int i = 0; i < p->size - 2; ++i)
+			std::cout << p->mess[i];
+		BroadCastChat(id, p->mess);
+		break;
 	}
 	case CS_PACKET_ID::CS_MOVE_STOP: {
 		CS_MOVE_STOP_PACKET* p = reinterpret_cast<CS_MOVE_STOP_PACKET*>(packet);
@@ -303,6 +310,20 @@ void Server::WorkerThread()
 
 void Server::disconnect(int key)
 {
+}
+
+void Server::BroadCastChat(int id, char* p)
+{
+	SC_CHAT_PACKET chatPacket;
+	chatPacket.size = sizeof(SC_CHAT_PACKET) - CHAT_SIZE + strlen(p) + 1;
+	chatPacket.type = static_cast<int>(SC_PACKET_ID::SC_CHAT);
+	chatPacket.id = id;
+	memcpy_s(chatPacket.mess, 100, p, 100);
+	for (int i = 0; i < MAX_USER; ++i) {
+		Session* player = reinterpret_cast<Session*>(objects[i]);
+		if (player->GetState() != ST_INGAME) continue;
+			player->do_send(&chatPacket);
+	}
 }
 
 int Server::get_new_client_id()
