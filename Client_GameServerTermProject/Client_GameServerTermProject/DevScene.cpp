@@ -29,7 +29,7 @@ DevScene::~DevScene()
 void DevScene::Init()
 {
 	// 파일 불러오기
-	GET_SINGLE(ResourceManager)->LoadTexture(L"Stage01", L"Sprite\\Map\\Stage01.bmp");
+	GET_SINGLE(ResourceManager)->LoadTexture(L"Stage01", L"Sprite\\Map\\Stage04.bmp");
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Stage03", L"Sprite\\Map\\Stage03.bmp");
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Tile", L"Sprite\\Map\\Tile.bmp", RGB(128, 128, 128));
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Sword", L"Sprite\\Item\\Sword.bmp");
@@ -38,6 +38,8 @@ void DevScene::Init()
 	GET_SINGLE(ResourceManager)->LoadTexture(L"PlayerUp", L"Sprite\\Player\\PlayerUp.bmp", RGB(128, 128, 128));
 	GET_SINGLE(ResourceManager)->LoadTexture(L"PlayerLeft", L"Sprite\\Player\\PlayerLeft.bmp", RGB(128, 128, 128));
 	GET_SINGLE(ResourceManager)->LoadTexture(L"PlayerRight", L"Sprite\\Player\\PlayerRight.bmp", RGB(128, 128, 128));
+	GET_SINGLE(ResourceManager)->LoadTexture(L"MonsterSnake", L"Sprite\\Monster\\Snake.bmp", RGB(128, 128, 128));
+
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Start", L"Sprite\\UI\\Start.bmp");
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Edit", L"Sprite\\UI\\Edit.bmp");
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Exit", L"Sprite\\UI\\Exit.bmp");
@@ -57,70 +59,96 @@ void DevScene::Init()
 	GET_SINGLE(ResourceManager)->CreateSprite(L"Exit_On", GET_SINGLE(ResourceManager)->GetTexture(L"Exit"), 150, 0, 150, 150);
 	GET_SINGLE(ResourceManager)->CreateSprite(L"Pro", GET_SINGLE(ResourceManager)->GetTexture(L"Pro"), 0, 0, 150, 150);
 
-	// IDLE
+	// Player
 	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerUp");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_IdleUp");
-		fb->SetInfo({ texture, L"FB_MoveUp", {125, 125}, 0, 9, 0, 0.5f });
+		// IDLE
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerUp");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_IdleUp");
+			fb->SetInfo({ texture, L"FB_MoveUp", {125, 125}, 0, 9, 0, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerDown");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_IdleDown");
+			fb->SetInfo({ texture, L"FB_MoveDown", {125, 125}, 0, 9, 0, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerLeft");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_IdleLeft");
+			fb->SetInfo({ texture, L"FB_MoveLeft", {125, 125}, 0, 9, 0, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerRight");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_IdleRight");
+			fb->SetInfo({ texture, L"FB_MoveRight", {125, 125}, 0, 9, 0, 0.5f });
+		}
+		// MOVE
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerUp");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_MoveUp");
+			fb->SetInfo({ texture, L"FB_MoveUp", {125, 125}, 0, 9, 1, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerDown");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_MoveDown");
+			fb->SetInfo({ texture, L"FB_MoveDown", {125, 125}, 0, 9, 1, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerLeft");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_MoveLeft");
+			fb->SetInfo({ texture, L"FB_MoveLeft", {125, 125}, 0, 9, 1, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerRight");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_MoveRight");
+			fb->SetInfo({ texture, L"FB_MoveRight", {125, 125}, 0, 9, 1, 0.5f });
+		}
+		// SKILL
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerUp");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_AttackUp");
+			fb->SetInfo({ texture, L"FB_MoveUp", {125, 125}, 0, 7, 3, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerDown");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_AttackDown");
+			fb->SetInfo({ texture, L"FB_MoveDown", {125, 125}, 0, 7, 3, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerLeft");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_AttackLeft");
+			fb->SetInfo({ texture, L"FB_MoveLeft", {125, 125}, 0, 7, 3, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerRight");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_AttackRight");
+			fb->SetInfo({ texture, L"FB_MoveRight", {125, 125}, 0, 7, 3, 0.5f });
+		}
 	}
+	// Monster
 	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerDown");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_IdleDown");
-		fb->SetInfo({ texture, L"FB_MoveDown", {125, 125}, 0, 9, 0, 0.5f });
+		// MOVE
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"MonsterSnake");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMoveUp");
+			fb->SetInfo({ texture, L"FB_MonsterMoveUp", {50, 50}, 0, 3, 0, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"MonsterSnake");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMoveDown");
+			fb->SetInfo({ texture, L"FB_MonsterMoveDown", {50, 50}, 0, 3, 1, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"MonsterSnake");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMoveLeft");
+			fb->SetInfo({ texture, L"FB_MonsterMoveLeft", {50, 50}, 0, 3, 2, 0.5f });
+		}
+		{
+			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"MonsterSnake");
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMoveRight");
+			fb->SetInfo({ texture, L"FB_MonsterMoveRight", {50, 50}, 0, 3, 3, 0.5f });
+		}
 	}
-	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerLeft");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_IdleLeft");
-		fb->SetInfo({ texture, L"FB_MoveLeft", {125, 125}, 0, 9, 0, 0.5f });
-	}
-	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerRight");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_IdleRight");
-		fb->SetInfo({ texture, L"FB_MoveRight", {125, 125}, 0, 9, 0, 0.5f });
-	}
-	// MOVE
-	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerUp");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_MoveUp");
-		fb->SetInfo({ texture, L"FB_MoveUp", {125, 125}, 0, 9, 1, 0.5f });
-	}
-	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerDown");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_MoveDown");
-		fb->SetInfo({ texture, L"FB_MoveDown", {125, 125}, 0, 9, 1, 0.5f });
-	}
-	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerLeft");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_MoveLeft");
-		fb->SetInfo({ texture, L"FB_MoveLeft", {125, 125}, 0, 9, 1, 0.5f });
-	}
-	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerRight");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_MoveRight");
-		fb->SetInfo({ texture, L"FB_MoveRight", {125, 125}, 0, 9, 1, 0.5f });
-	}
-	// SKILL
-	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerUp");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_AttackUp");
-		fb->SetInfo({ texture, L"FB_MoveUp", {125, 125}, 0, 7, 3, 0.5f });
-	}
-	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerDown");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_AttackDown");
-		fb->SetInfo({ texture, L"FB_MoveDown", {125, 125}, 0, 7, 3, 0.5f });
-	}
-	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerLeft");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_AttackLeft");
-		fb->SetInfo({ texture, L"FB_MoveLeft", {125, 125}, 0, 7, 3, 0.5f });
-	}
-	{
-		Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"PlayerRight");
-		Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_AttackRight");
-		fb->SetInfo({ texture, L"FB_MoveRight", {125, 125}, 0, 7, 3, 0.5f });
-	}
-
 	// 언리얼 방식
 	{
 		Sprite* sprite = GET_SINGLE(ResourceManager)->GetSprite(L"Stage01");
@@ -137,16 +165,16 @@ void DevScene::Init()
 	}
 
 	{
-		Sprite* sprite = GET_SINGLE(ResourceManager)->GetSprite(L"Stage03");
+		//Sprite* sprite = GET_SINGLE(ResourceManager)->GetSprite(L"Stage03");
 
-		// 액터는 씬에 배치할 수 있는 것이다. 
-		SpriteActor* background = new SpriteActor();
-		background->SetSprite(sprite);
-		background->SetLayer(LAYER_UI);
-		const VectorInt size = sprite->GetSize();
-		background->SetPos(Vector(size.x / 2, size.y / 2));
+		//// 액터는 씬에 배치할 수 있는 것이다. 
+		//SpriteActor* background = new SpriteActor();
+		//background->SetSprite(sprite);
+		//background->SetLayer(LAYER_UI);
+		//const VectorInt size = sprite->GetSize();
+		//background->SetPos(Vector(size.x / 2, size.y / 2));
 
-		AddActor(background);
+		//AddActor(background);
 	}
 
 

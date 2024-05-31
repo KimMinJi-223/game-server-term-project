@@ -2,12 +2,15 @@
 #include "Server.h"
 #include <vector>
 #include <thread>
+#include "Timer.h"
 
 int main()
 {
 	std::wcout.imbue(std::locale("korean"));
 	Server* server = new Server();
 	server->Init();
+	Timer* timer = server->GetTImer();
+	std::thread timerThread{ [&timer]() {timer->do_timer(); } };
 
 	std::vector<std::thread> worker_threads;
 	int num_threads = std::thread::hardware_concurrency();
@@ -15,6 +18,6 @@ int main()
 		worker_threads.emplace_back([&server]() { server->WorkerThread(); });
 	for (auto& th : worker_threads)
 		th.join();
-
+	timerThread.join();
 	delete server;
 }

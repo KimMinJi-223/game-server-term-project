@@ -1,5 +1,6 @@
 #pragma once
 #include "Player.h"
+#include "Monster.h"
 #include "PlayerController.h"
 
 class Actor;
@@ -27,6 +28,7 @@ public:
 
 	Player* avatar;
 	unordered_map <int, Player*> players;
+	unordered_map <int, Monster*> monsters;
 
 private:
 	PlayerController* controller;

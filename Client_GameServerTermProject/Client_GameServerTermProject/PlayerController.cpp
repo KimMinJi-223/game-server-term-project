@@ -20,72 +20,75 @@ void PlayerController::Init()
 {
 	player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->avatar;
 	socket = GET_SINGLE(NetworkManager)->GetInstance()->socket;
+	_keyPressTime = 1.f;
 }
 
 void PlayerController::Update()
 {
-	
-	if (player->_keyPressed) {
-		return;
-	}
-
+	bool isPress = false;
+	CS_MOVE_PACKET packet;
 	if (GET_SINGLE(InputManager)->GetButton(KeyType::W))
 	{
-		CS_MOVE_PACKET packet;
 		packet.size = sizeof(CS_MOVE_PACKET);
 		packet.type = static_cast<char>(CS_PACKET_ID::CS_MOVE);
 		packet.direction = DIR_UP;
 		// Send하기
+		isPress = true;
 		player->_keyPressed = true;
-		::send(socket, reinterpret_cast<char*>(&packet), sizeof(packet), 0);
 	}
 	else if (GET_SINGLE(InputManager)->GetButton(KeyType::S))
 	{
-		CS_MOVE_PACKET packet;
 		packet.size = sizeof(CS_MOVE_PACKET);
 		packet.type = static_cast<char>(CS_PACKET_ID::CS_MOVE);
 		packet.direction = DIR_DOWN;
 		// Send하기
+		isPress = true;
+
 		player->_keyPressed = true;
-		::send(socket, reinterpret_cast<char*>(&packet), sizeof(packet), 0);
 
 	}
 	else if (GET_SINGLE(InputManager)->GetButton(KeyType::A))
 	{
-		CS_MOVE_PACKET packet;
 		packet.size = sizeof(CS_MOVE_PACKET);
 		packet.type = static_cast<char>(CS_PACKET_ID::CS_MOVE);
 		packet.direction = DIR_LEFT;
 		// Send하기
+		isPress = true;
+
 		player->_keyPressed = true;
-		::send(socket, reinterpret_cast<char*>(&packet), sizeof(packet), 0);
 
 	}
 	else if (GET_SINGLE(InputManager)->GetButton(KeyType::D))
 	{
-		CS_MOVE_PACKET packet;
 		packet.size = sizeof(CS_MOVE_PACKET);
 		packet.type = static_cast<char>(CS_PACKET_ID::CS_MOVE);
 		packet.direction = DIR_RIGHT;
 		// Send하기
+		isPress = true;
+
 		player->_keyPressed = true;
-		::send(socket, reinterpret_cast<char*>(&packet), sizeof(packet), 0);
+		
 
 	}
 	else if (GET_SINGLE(InputManager)->GetButton(KeyType::Q))
 	{
 		// Send하기
 	}
-	else
-	{
-		if (player->_keyPressed == false)
-			return; // 이미 보낸거임
-		// 키 안누름
+	else {
+		// 버튼 뗀경우 
 		player->_keyPressed = false;
-		CS_MOVE_STOP_PACKET packet;
-		packet.size = sizeof(CS_MOVE_STOP_PACKET);
-		packet.type = static_cast<char>(CS_PACKET_ID::CS_MOVE_STOP);
-		// Send하기
 	}
-	
+	// 1초에 한번 서버에 입력키를 보낸다. (안 눌렀으면 안보냄)
+	float deltaTime = GET_SINGLE(TimeManager)->GetDeltaTime();
+	if (_keyPressTime <= 0.f) {
+		player->_keyPressed = false;
+		if (isPress) {
+			::send(socket, reinterpret_cast<char*>(&packet), sizeof(CS_MOVE_PACKET), 0);
+			player->_keyPressed = true;
+			_keyPressTime = 1.0f;
+			return;
+		}
+	}
+	_keyPressTime -= deltaTime;
+
 }

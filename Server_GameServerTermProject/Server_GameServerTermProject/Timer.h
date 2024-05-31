@@ -20,10 +20,13 @@ class Timer
 {
 private:
 	concurrency::concurrent_priority_queue<TIMER_EVENT> _timer_queue;
+	HANDLE _hiocp;
+public:
+	void Init(HANDLE hiocp);
 
 public:
 	void add_timer(int obj_id, EVENT_TYPE et, int ms);
-
+	void do_timer();
 
 };
 

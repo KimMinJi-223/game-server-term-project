@@ -126,12 +126,6 @@
     <ClInclude Include="FlipbookActor.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Monster.h">
-      <Filter>소스 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Player.h">
-      <Filter>소스 파일</Filter>
-    </ClInclude>
     <ClInclude Include="SpriteActor.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
@@ -142,6 +136,12 @@
       <Filter>main</Filter>
     </ClInclude>
     <ClInclude Include="NetworkManager.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="Monster.h">
       <Filter>main</Filter>
     </ClInclude>
   </ItemGroup>
@@ -224,12 +224,6 @@
     <ClCompile Include="FlipbookActor.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Monster.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Player.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="SpriteActor.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
@@ -237,6 +231,12 @@
       <Filter>main</Filter>
     </ClCompile>
     <ClCompile Include="NetworkManager.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="Monster.cpp">
       <Filter>main</Filter>
     </ClCompile>
   </ItemGroup>

@@ -27,6 +27,7 @@ public:
 	void SetName(const char* name) { strcpy_s(_name, name); }
 	char* GetName() { return _name; }
 	int GetId() { return _id; }
+	void SetIsNpc(bool is_npc) { _is_npc = is_npc; }
 	bool GetIsNpc() { return _is_npc; }
 	void SetSectorId(int sectorId) { _sectorId = sectorId; }
 	int GetSectorId() { return _sectorId; }

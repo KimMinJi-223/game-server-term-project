@@ -1,6 +1,7 @@
 #include <WS2tcpip.h>
 #include <MSWSock.h>
 #include "Player.h"
+#include "Monster.h"
 #include "NetworkManager.h"
 #include "SceneManager.h"
 #include "Scene.h"
@@ -67,11 +68,9 @@ void NetworkManager::ProcessPacket(char* p)
 	{
 		SC_LOGIN_INFO_PACKET* packet = reinterpret_cast<SC_LOGIN_INFO_PACKET*>(p);
 		myId = packet->id;
-		//Pos newPos = { (float)packet->x, (float)packet->y };
-		VectorInt newPos2 = { packet->x, packet->y };
+		VectorInt pos = { packet->x, packet->y };
 
-		avatar->SetCellPos(newPos2, true);
-
+		avatar->SetCellPos(pos, true);
 	}
 	break;
 	case static_cast<int>(SC_PACKET_ID::SC_ADD_PLAYER):
@@ -84,59 +83,63 @@ void NetworkManager::ProcessPacket(char* p)
 			avatar->SetState(PlayerState::Idle);
 		}
 		else {
-			Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id] = new Player();
-			player->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
-			player->SetState(PlayerState::Idle);
+			if (my_packet->visual == VI_NPC) {
+				Monster* monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters[id] = new Monster();
+				monster->SetPos(Vector{ (float)my_packet->x * 30, (float)my_packet->y * 30 });
+			}
+			else {
+				Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id] = new Player();
+				player->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
+				player->SetState(PlayerState::Idle);
+			}
 		}
 
 		break;
 	}
 	case static_cast<int>(SC_PACKET_ID::SC_MOVE_PLAYER):
 	{
-		SC_MOVE_PLAYER_PACKET* my_packet = reinterpret_cast<SC_MOVE_PLAYER_PACKET*>(p);
-		int id = my_packet->id;
+		SC_MOVE_PLAYER_PACKET* packet = reinterpret_cast<SC_MOVE_PLAYER_PACKET*>(p);
+		int id = packet->id;
 		if (id == myId) {
 			avatar->SetPos(avatar->GetDestPos());
-			avatar->SetCellPos(VectorInt{ my_packet->x, my_packet->y });
-			avatar->SetDir(static_cast<Dir>(my_packet->direction));
+			avatar->SetCellPos(VectorInt{ packet->x, packet->y });
+			avatar->SetDir(static_cast<Dir>(packet->direction));
 			avatar->SetState(PlayerState::Move);
 		}
 		else {
 			Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id];
 			player->SetPos(player->GetDestPos());
-			player->SetCellPos(VectorInt{ my_packet->x, my_packet->y });
-			player->SetDir(static_cast<Dir>(my_packet->direction));
+			player->SetCellPos(VectorInt{ packet->x, packet->y });
+			player->SetDir(static_cast<Dir>(packet->direction));
 			player->SetState(PlayerState::Move);
 		}		break;
 	}
 
-	/*case static_cast<int>(SC_PACKET_ID::SC_REMOVE_PLAYER):
+	case static_cast<int>(SC_PACKET_ID::SC_REMOVE_PLAYER):
 	{
-		SC_REMOVE_PLAYER_PACKET* my_packet = reinterpret_cast<SC_REMOVE_PLAYER_PACKET*>(p);
-		int other_id = my_packet->id;
-		if (other_id == g_myid) {
-			avatar.hide();
-		}
-		else {
-			players.erase(other_id);
-		}
-		break;
-	}*/
+			break;
+	}
 	case static_cast<int>(SC_PACKET_ID::SC_CHAT):
 	{
 		SC_CHAT_PACKET* my_packet = reinterpret_cast<SC_CHAT_PACKET*>(p);
 		HWND hListBox = GetDlgItem(_hwnd, 1000);
-		wchar_t wchar[CHAT_SIZE / 2];
-		MultiByteToWideChar(CP_ACP, 0, my_packet->mess, -1, wchar, CHAT_SIZE / 2);
-		SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)wchar);
+		wchar_t message[(CHAT_SIZE + NAME_SIZE) / 2];
+
+		wchar_t name[NAME_SIZE / 2];
+		MultiByteToWideChar(CP_ACP, 0, my_packet->name, -1, name, NAME_SIZE / 2);
+		wchar_t text[CHAT_SIZE/2];
+		MultiByteToWideChar(CP_ACP, 0, my_packet->mess, -1, text, CHAT_SIZE / 2);
+
+		swprintf(message, NAME_SIZE + CHAT_SIZE, L"[%s] : %s", name, text);
+	
+		SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)message);
 		SetDlgItemText(_hwnd, 2000, TEXT(""));
 		SendMessage(hListBox, LB_SETCARETINDEX, (WPARAM)(SendMessage(hListBox, LB_GETCOUNT, 0, 0) - 1), 0);
-
-
 		break;
 	}
 	default:
 		printf("Unknown PACKET type [%d]\n", recvBuffer[1]);
+		break;
 	}
 }
 

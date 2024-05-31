@@ -24,7 +24,7 @@ void CameraComponent::Tick()
 	Vector pos = _owner->GetPos();
 
 	pos.x = ::clamp(pos.x, GWinSizeX / 2.f, GMapSizeX - GWinSizeX / 2.f);
-	pos.y = ::clamp(pos.y, GWinSizeX / 2.f, GMapSizeY - GWinSizeX / 2.f);
+	pos.y = ::clamp(pos.y, GWinSizeY / 2.f, GMapSizeY - GWinSizeY / 2.f);
 
 	GET_SINGLE(SceneManager)->SetCameraPos(pos);
 }

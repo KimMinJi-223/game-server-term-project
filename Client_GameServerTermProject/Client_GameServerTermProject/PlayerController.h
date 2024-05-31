@@ -6,7 +6,7 @@ class PlayerController
 private:
 	Player* player;
 	SOCKET socket;
-
+	float _keyPressTime;
 public:
 	PlayerController();
 	~PlayerController();
@@ -14,7 +14,5 @@ public:
 public:
 	void Init();
 	void Update();
-
-
 };
 

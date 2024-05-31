@@ -3,8 +3,10 @@
 const int32 GWinSizeX = 600;
 const int32 GWinSizeY = 600;
 
-const int32 GMapSizeX = 1890;
-const int32 GMapSizeY = 1289;
+//const int32 GMapSizeX = 1890;
+//const int32 GMapSizeY = 1289;
+const int32 GMapSizeX = 3000;
+const int32 GMapSizeY = 3000;
 
 const int32 GTilesSize = 30;
 

@@ -77,7 +77,7 @@ void FlipbookActor::SetFlipbook(Flipbook* flipbook)
 		return;
 
 	_flipbook = flipbook;
-	Reset();
+	//Reset();
 }
 
 void FlipbookActor::Reset()

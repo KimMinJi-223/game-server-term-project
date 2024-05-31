@@ -74,6 +74,13 @@ bool Sector::WriteUnLock()
 	return true;
 }
 
+void Sector::GetPlayerList(std::unordered_set<int>& list)
+{
+	ReadLock();
+	list = _player_list;
+	ReadUnLock();
+}
+
 void Sector::AddPlayerList(int id)
 {
 	WriteLock();
@@ -87,3 +94,4 @@ void Sector::RemovePlayerList(int id)
 	_player_list.erase(id);
 	WriteUnLock();
 }
+

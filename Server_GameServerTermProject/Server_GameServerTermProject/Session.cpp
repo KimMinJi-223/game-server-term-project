@@ -5,7 +5,6 @@ void Session::Init(int x, int y, int id, const char* name, SOCKET socket)
 	Object::Init(x, y, id, name);
 	_prev_remain = 0;
 	_socket = socket;
-	_is_moving = false;
 }
 
 void Session::do_recv()
@@ -63,8 +62,6 @@ void Session::send_add_player_packet(Object& other, char c_visual)
 
 void Session::send_move_packet(Object& other, char dir)
 {
-	printf("send_move_packet %d \n", other.GetId());
-
 	SC_MOVE_PLAYER_PACKET p;
 	p.id = other.GetId();
 	p.size = sizeof(SC_MOVE_PLAYER_PACKET);

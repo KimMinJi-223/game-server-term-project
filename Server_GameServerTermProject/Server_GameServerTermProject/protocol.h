@@ -2,13 +2,13 @@
 constexpr int PORT_NUM = 4000;
 constexpr int BUF_SIZE = 200;
 constexpr int MAX_USER = 17000;
-constexpr int NUM_NPC = 200000;
+constexpr int NUM_NPC = 200;
 
 constexpr int NAME_SIZE = 20;
 constexpr int CHAT_SIZE = 100;
 
-constexpr int W_WIDTH = 400;
-constexpr int W_HEIGHT = 400;
+constexpr int W_WIDTH = 100;
+constexpr int W_HEIGHT = 100;
 
 enum OBJECT_VISUAL { VI_AVATAR, VI_PLAYER, VI_NPC };
 
@@ -54,6 +54,7 @@ struct CS_CHAT_PACKET {
 	char	type;
 	char	mess[CHAT_SIZE];
 };
+
 struct CS_MOVE_STOP_PACKET {
 	unsigned char size;
 	char	type;
@@ -95,7 +96,7 @@ struct  SC_CHAT_PACKET
 {
 	unsigned char size;
 	char	type;
-	int		id;
+	char	name[NAME_SIZE];
 	char	mess[CHAT_SIZE];
 };
 #pragma pack (pop)

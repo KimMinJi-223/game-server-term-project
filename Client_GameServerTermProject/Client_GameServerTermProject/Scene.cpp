@@ -58,6 +58,9 @@ void Scene::Update()
 	for (auto p : players)
 		p.second->Tick();
 
+	for (auto m : monsters)
+		m.second->Tick();
+
 	avatar->Tick();
 }
 
@@ -77,6 +80,9 @@ void Scene::Render(HDC hdc)
 
 	for (auto p : players)
 		p.second->Render(hdc);
+
+	for (auto m : monsters)
+		m.second->Render(hdc);
 
 	avatar->Render(hdc);
 }

@@ -6,9 +6,15 @@
 #include "Session.h"
 #include "Monster.h"
 #include <unordered_set>
+#include <fstream>
 
 void Server::Init()
 {
+	std::cout << "서버 실행중..." << std::endl;
+
+	LoadCollision("collision.txt");
+	initialize_npc();
+
 	WSADATA WSAData;
 	WSAStartup(MAKEWORD(2, 2), &WSAData);
 
@@ -30,6 +36,61 @@ void Server::Init()
 	_client_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 	_accept_over._comp_type = OP_ACCEPT;
 	AcceptEx(_listen_socket, _client_socket, _accept_over._send_buf, 0, addr_size + 16, addr_size + 16, 0, &_accept_over._over);
+	
+	_timerQueue.Init(_hiocp);
+	std::cout << "서버 부팅 완료" << std::endl;
+}
+
+void Server::initialize_npc()
+{
+	std::cout << "NPC intialize begin.\n";
+	for (int i = 0; i < NUM_NPC; ++i) {
+		int npc_id = i + MAX_USER;
+		objects[npc_id] = new Monster();
+
+		int x = 0;
+		int y = 0;
+		while (true) {
+			x = rand() % W_WIDTH;
+			y = rand() % W_HEIGHT;
+			if (can_go(x, y))
+				break;
+		}
+
+		int sectorId = (x / SECTOR_SIZE) + ((y / SECTOR_SIZE) * MULTIPLY_ROW);
+		objects[npc_id]->SetSectorId(sectorId);
+		sectors[sectorId].AddPlayerList(npc_id);
+		objects[npc_id]->SetState(ST_INGAME);
+
+		char name[NAME_SIZE];
+		sprintf_s(name, "M%d", i);
+		objects[npc_id]->Init(x, y, npc_id, name);
+		objects[npc_id]->SetIsNpc(true);
+	}
+	std::cout << "NPC initialize end.\n";
+}
+
+void Server::LoadCollision(const char* fileName)
+{
+	_collision = std::vector<std::vector<int>>(W_HEIGHT, std::vector<int>(W_WIDTH));
+
+	std::wifstream ifs{ fileName };
+	if (!ifs) {
+		std::cout << "파일로드 실패" << std::endl;
+		exit(-1);
+	}
+
+	for (int y = 0; y < W_HEIGHT; ++y)
+	{
+		std::wstring line;
+		ifs >> line;
+
+		for (int x = 0; x < W_WIDTH; ++x)
+		{
+			_collision[y][x] = line[x] - L'0';
+		}
+	}
+	ifs.close();
 }
 
 bool Server::can_see(int objectID_1, int objectID_2)
@@ -41,6 +102,11 @@ bool Server::can_see(int objectID_1, int objectID_2)
 	return abs(pos1.y - pos2.y) <= VIEW_RANGE;
 }
 
+bool Server::can_go(int x, int y)
+{
+	return _collision[y][x] != 1;
+}
+
 void Server::process_packet(int id, char* packet)
 {
 	switch (static_cast<CS_PACKET_ID>(packet[1])) {
@@ -48,15 +114,14 @@ void Server::process_packet(int id, char* packet)
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 		Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
 		loginPlayer->SetName(p->name);
-		loginPlayer->SetPosition(15, 5/*rand() % W_WIDTH, rand() % W_HEIGHT*/);
+		loginPlayer->SetPosition(17, 5/*rand() % W_WIDTH, rand() % W_HEIGHT*/);
 		
 		Pos playerPos = loginPlayer->GetPosition();
 		int sectorId = (playerPos.x / SECTOR_SIZE) + ((playerPos.y / SECTOR_SIZE) * MULTIPLY_ROW);
-		//sectors[sectorId].WriteLock();
 		sectors[sectorId].AddPlayerList(id);
-		//sectors[sectorId].WriteUnLock();
 
 		loginPlayer->send_login_info_packet(VI_PLAYER);
+
 		{
 			std::lock_guard<std::mutex> ll{ loginPlayer->GetStateMutex() };
 			loginPlayer->SetState(ST_INGAME);
@@ -65,15 +130,12 @@ void Server::process_packet(int id, char* packet)
 		std::unordered_set<int> playerList;
 		int adj_index = 0;
 
-		for (int i = 0; i < ADJ_COUNT; ++i)
-		{
+		for (int i = 0; i < ADJ_COUNT; ++i) {
 			adj_index = sectorId - adj_sector[i];
 			if (adj_index < 0 || adj_index > SECTOR_COUNT - 1)
 				continue;
 
-			sectors[adj_index].ReadLock();
-			playerList = sectors[adj_index]._player_list;
-			sectors[adj_index].ReadUnLock();
+			 sectors[adj_index].GetPlayerList(playerList);
 
 			for (auto& pl_id : playerList) {
 				Object& cl = *(objects[pl_id]);
@@ -81,10 +143,12 @@ void Server::process_packet(int id, char* packet)
 					std::lock_guard<std::mutex> ll(cl.GetStateMutex());
 					if (ST_INGAME != cl.GetState()) continue;
 				}
-				if (pl_id == id) continue;
+				if (pl_id == id) 
+					continue;
 				if (true == can_see(pl_id, id)) {
-					if (true == cl.GetIsNpc())
-					{
+
+					// 이부분 함수로 뺴기 가능?
+					if (true == cl.GetIsNpc()) {
 						OVER_EXP* exover = new OVER_EXP;
 						exover->_comp_type = OP_AI_HELLO;
 						exover->_cause_player_id = id;
@@ -93,17 +157,17 @@ void Server::process_packet(int id, char* packet)
 
 						Monster* monster = reinterpret_cast<Monster*>(objects[id]);
 						if (false == monster->GetIsActive()) {
-							bool input = false;
 							if (true == monster->CASIsActive(false, true))
 								_timerQueue.add_timer(pl_id, EV_RANDOM_MOVE, 1000);
 							continue;
 						}
-						else if (true == monster->GetIsActive())
+						else {
 							loginPlayer->send_add_player_packet(cl, VI_NPC);
+						}
 					}
 					else {
 						loginPlayer->send_add_player_packet(cl, VI_PLAYER);
-						reinterpret_cast<Session*>(&cl)->send_add_player_packet(*(objects[id]), VI_PLAYER);
+						reinterpret_cast<Session*>(&cl)->send_add_player_packet(*loginPlayer, VI_PLAYER);
 					}
 				}
 			}
@@ -111,107 +175,11 @@ void Server::process_packet(int id, char* packet)
 		break;
 	}
 	case CS_PACKET_ID::CS_MOVE: {
+		std::cout << "CS_MOVE" << std::endl;
+
 		CS_MOVE_PACKET* p = reinterpret_cast<CS_MOVE_PACKET*>(packet);
 		Session* movePlayer = reinterpret_cast<Session*>(objects[id]);
-		movePlayer->_last_move_time = p->move_time;
-		Pos prevPos = movePlayer->GetPosition();
-		short x = prevPos.x;
-		short y = prevPos.y;
-		switch (p->direction) {
-		case DIR_UP: if (y > 0) y--; break;
-		case DIR_DOWN: if (y < W_HEIGHT - 1) y++; break;
-		case DIR_LEFT: if (x > 0) x--; break;
-		case DIR_RIGHT: if (x < W_WIDTH - 1) x++; break;
-		}
-		movePlayer->SetPosition(x, y);
-		movePlayer->SetIsMoving(true);
-
-		// 추가 : 타이머에 넣는 작업도 필요 (1초 후 또 이동하는 그런)
-
-		int sectorId = (x / SECTOR_SIZE) + ((y / SECTOR_SIZE) * MULTIPLY_ROW);
-
-		int currentSectorId = movePlayer->GetSectorId();
-		if (sectorId != currentSectorId) {
-			//sectors[currentSectorId].WriteLock();
-			sectors[currentSectorId].RemovePlayerList(id);
-			//sectors[currentSectorId].WriteUnLock();
-
-			movePlayer->SetSectorId(sectorId);
-			//sectors[sectorId].WriteLock();
-			sectors[sectorId].AddPlayerList(id);
-			//sectors[sectorId].WriteUnLock();
-		}
-
-	
-		std::unordered_set<int> old_vl;
-		movePlayer->GetRefViewList(old_vl);
-		std::unordered_set<int> new_vl;
-
-		std::unordered_set<int> playerList;
-		int adj_index = 0;
-		for (int i = 0; i < ADJ_COUNT; ++i)
-		{
-			adj_index = sectorId - adj_sector[i];
-			if (adj_index < 0 || adj_index > SECTOR_COUNT - 1)
-				continue;
-
-			sectors[adj_index].ReadLock();
-			playerList = sectors[adj_index]._player_list;
-			sectors[adj_index].ReadUnLock();
-
-			for (auto& pl_id : playerList) {
-				Object& cl = *(objects[pl_id]);
-
-				if (cl.GetState() != ST_INGAME) continue;
-				if (pl_id == id) continue;
-				if (true == can_see(pl_id, id)) {
-					new_vl.insert(pl_id);
-					if ((true == cl.GetIsNpc())) {
-						OVER_EXP* exover = new OVER_EXP;
-						exover->_comp_type = OP_AI_HELLO;
-						exover->_cause_player_id = id;
-						PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
-
-						Monster* monster = reinterpret_cast<Monster*>(objects[id]);
-						if (false == monster->GetIsActive()) {
-							bool input = false;
-							if (true == monster->CASIsActive(false, true))
-								_timerQueue.add_timer(pl_id, EV_RANDOM_MOVE, 1000);
-						}
-					}
-				}
-			}
-		}
-
-		movePlayer->send_move_packet(*(objects[id]), p->direction);
-		// ADD_PLAYER
-		for (auto& cl : new_vl) {
-			Session* addPlayer = reinterpret_cast<Session*>(objects[cl]);
-			char c_visual = VI_PLAYER;
-			if (0 == old_vl.count(cl)) {
-				if (false == addPlayer->GetIsNpc()) {
-					addPlayer->send_add_player_packet(*(objects[id]), VI_PLAYER);
-				}
-				else
-					c_visual = VI_NPC;
-				movePlayer->send_add_player_packet(*(objects[cl]), c_visual);
-			}
-			else {
-				// MOVE_PLAYER
-				if (false == addPlayer->GetIsNpc())
-					addPlayer->send_move_packet(*(objects[id]), p->direction);
-			}
-		}
-		// REMOVE_PLAYER
-		for (auto& cl : old_vl) {
-			if (0 == new_vl.count(cl)) {
-				if (false == objects[cl]->GetIsNpc()) {
-					Session* removePlayer = reinterpret_cast<Session*>(objects[cl]);
-					removePlayer->send_remove_player_packet(id);
-				}
-				movePlayer->send_remove_player_packet(cl);
-			}
-		}
+		process_move(movePlayer, id, p->direction);
 		break;
 	}
 	case CS_PACKET_ID::CS_CHAT: {
@@ -223,8 +191,9 @@ void Server::process_packet(int id, char* packet)
 	}
 	case CS_PACKET_ID::CS_MOVE_STOP: {
 		CS_MOVE_STOP_PACKET* p = reinterpret_cast<CS_MOVE_STOP_PACKET*>(packet);
-		reinterpret_cast<Session*>(objects[id])->SetIsMoving(false);
 		// move패킷을 보내는 타이머 이벤트의 경우 _is_moving이 true인지 확인해야함
+		std::cout << "CS_MOVE_STOP" << std::endl;
+		break;
 	}
 	default:
 		std::cout << "정체불명 패킷" << std::endl;
@@ -304,7 +273,11 @@ void Server::WorkerThread()
 		case OP_SEND:
 			delete ex_over;
 			break;
+		case OP_NPC_MOVE:
+			std::cout << "OP_NPC_MOVE" << std::endl;
+			break;
 		}
+	
 	}
 }
 
@@ -317,13 +290,137 @@ void Server::BroadCastChat(int id, char* p)
 	SC_CHAT_PACKET chatPacket;
 	chatPacket.size = sizeof(SC_CHAT_PACKET) - CHAT_SIZE + strlen(p) + 1;
 	chatPacket.type = static_cast<int>(SC_PACKET_ID::SC_CHAT);
-	chatPacket.id = id;
+	strcpy_s(chatPacket.name, objects[id]->GetName());
 	memcpy_s(chatPacket.mess, 100, p, 100);
 	for (int i = 0; i < MAX_USER; ++i) {
 		Session* player = reinterpret_cast<Session*>(objects[i]);
 		if (player->GetState() != ST_INGAME) continue;
 			player->do_send(&chatPacket);
 	}
+}
+
+void Server::process_move(Session* movePlayer, int id, char direction)
+{
+	Pos prevPos = movePlayer->GetPosition();
+	short x = prevPos.x;
+	short y = prevPos.y;
+	switch (direction) {
+	case DIR_UP: if (y > 0) y--; break;
+	case DIR_DOWN: if (y < W_HEIGHT - 1) y++; break;
+	case DIR_LEFT: if (x > 0) x--; break;
+	case DIR_RIGHT: if (x < W_WIDTH - 1) x++; break;
+	}
+	if (!can_go(x, y)) {
+		return;
+	}
+	movePlayer->SetPosition(x, y);
+
+	int sectorId = SetSectorId(*movePlayer, id, x, y);
+
+	std::unordered_set<int> old_vl;
+	movePlayer->GetRefViewList(old_vl);
+	std::unordered_set<int> new_vl;
+
+	std::unordered_set<int> playerList;
+	int adj_index = 0;
+	for (int i = 0; i < ADJ_COUNT; ++i)
+	{
+		adj_index = sectorId - adj_sector[i];
+		if (adj_index < 0 || adj_index > SECTOR_COUNT - 1)
+			continue;
+
+		sectors[adj_index].GetPlayerList(playerList);
+
+		for (auto& pl_id : playerList) {
+			Object& cl = *(objects[pl_id]);
+
+			if (cl.GetState() != ST_INGAME) continue;
+			if (pl_id == id) continue;
+			if (true == can_see(pl_id, id)) {
+				new_vl.insert(pl_id);
+				if ((true == cl.GetIsNpc())) {
+					OVER_EXP* exover = new OVER_EXP;
+					exover->_comp_type = OP_AI_HELLO;
+					exover->_cause_player_id = id;
+					PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
+
+					Monster* monster = reinterpret_cast<Monster*>(objects[id]);
+					if (false == monster->GetIsActive()) {
+						bool input = false;
+						if (true == monster->CASIsActive(false, true))
+							_timerQueue.add_timer(pl_id, EV_RANDOM_MOVE, 1000);
+					}
+				}
+			}
+		}
+	}
+
+	movePlayer->send_move_packet(*(objects[id]), direction);
+	// ADD_PLAYER
+	for (auto& cl : new_vl) {
+		Session* addPlayer = reinterpret_cast<Session*>(objects[cl]);
+		char c_visual = VI_PLAYER;
+		if (0 == old_vl.count(cl)) {
+			if (false == addPlayer->GetIsNpc()) {
+				addPlayer->send_add_player_packet(*(objects[id]), VI_PLAYER);
+			}
+			else
+				c_visual = VI_NPC;
+			movePlayer->send_add_player_packet(*(objects[cl]), c_visual);
+		}
+		else {
+			// MOVE_PLAYER
+			if (false == addPlayer->GetIsNpc())
+				addPlayer->send_move_packet(*(objects[id]), direction);
+		}
+	}
+	// REMOVE_PLAYER
+	for (auto& cl : old_vl) {
+		if (0 == new_vl.count(cl)) {
+			if (false == objects[cl]->GetIsNpc()) {
+				Session* removePlayer = reinterpret_cast<Session*>(objects[cl]);
+				removePlayer->send_remove_player_packet(id);
+			}
+			movePlayer->send_remove_player_packet(cl);
+		}
+	}
+}
+
+void Server::GetNearPlayersList(int id, std::unordered_set<int>& list)
+{ 
+	std::unordered_set<int> playerList;
+	int adj_index = objects[id]->GetSectorId();
+	for (int i = 0; i < ADJ_COUNT; ++i)
+	{
+		int index = adj_index - adj_sector[i];
+		if (index < 0 || index > SECTOR_COUNT - 1)
+			continue;
+
+		sectors[index].GetPlayerList(playerList);
+
+		for (auto& p : playerList) {
+			Session* s = reinterpret_cast<Session*>(&(objects[p]));
+			if (s->GetIsNpc()) continue;
+			if (s->GetState() != ST_INGAME) continue;
+			if (can_see(s->GetId(), id))
+				list.insert(s->GetId());
+		}
+	}
+}
+
+int Server::SetSectorId(Object& obj, int id, int x, int y)
+{
+	int sectorId = (x / SECTOR_SIZE) + ((y / SECTOR_SIZE) * MULTIPLY_ROW);
+
+	int currentSectorId = obj.GetSectorId();
+	if (sectorId != currentSectorId) {
+		sectors[currentSectorId].RemovePlayerList(id);
+
+		obj.SetSectorId(sectorId);
+		sectors[sectorId].AddPlayerList(id);
+	}
+
+	return sectorId;
 }
 
 int Server::get_new_client_id()

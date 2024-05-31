@@ -180,16 +180,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case 3000: // 버튼
 		{
-			//GetLocalTime(&st);
 			GetDlgItemText(hWnd, 2000, word, CHAT_SIZE / 2);
 			if (word[0] == '\0')
 				break;
 			WideCharToMultiByte(CP_ACP, 0, word, -1, multiText, sizeof(multiText), NULL, NULL);
-
-			HWND hListBox = GetDlgItem(hWnd, 1000);
-			SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)word);
-			SetDlgItemText(hWnd, 2000, TEXT(""));
-			SendMessage(hListBox, LB_SETCARETINDEX, (WPARAM)(SendMessage(hListBox, LB_GETCOUNT, 0, 0) - 1), 0);
 			GET_SINGLE(NetworkManager)->GetInstance()->SendChat(multiText);
 		}
 		break;

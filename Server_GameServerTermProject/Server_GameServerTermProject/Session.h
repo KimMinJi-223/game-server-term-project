@@ -17,7 +17,7 @@ private:
 	std::unordered_set <int> _view_list;
 	std::mutex	_vll;
 	int		_prev_remain;
-	bool _is_moving;
+
 public:
 	// 스트레스 테스트
 	int		_last_move_time;
@@ -38,7 +38,5 @@ public:
 	int GetPrevRemain() { return _prev_remain; }
 	void SetPrevRemain(int prev) { _prev_remain = prev; }
 	void GetRefViewList(std::unordered_set<int>& view);
-	bool GetIsMoving() { return _is_moving; }
-	void SetIsMoving(bool move) { _is_moving = move; }
 };
 
