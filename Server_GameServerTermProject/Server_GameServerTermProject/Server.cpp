@@ -114,7 +114,7 @@ void Server::process_packet(int id, char* packet)
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 		Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
 		loginPlayer->SetName(p->name);
-		loginPlayer->SetPosition(17, 5/*rand() % W_WIDTH, rand() % W_HEIGHT*/);
+		loginPlayer->SetPosition(14, 2/*rand() % W_WIDTH, rand() % W_HEIGHT*/);
 		
 		Pos playerPos = loginPlayer->GetPosition();
 		int sectorId = (playerPos.x / SECTOR_SIZE) + ((playerPos.y / SECTOR_SIZE) * MULTIPLY_ROW);
@@ -155,7 +155,7 @@ void Server::process_packet(int id, char* packet)
 						PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
 						loginPlayer->send_add_player_packet(cl, VI_NPC);
 
-						Monster* monster = reinterpret_cast<Monster*>(objects[id]);
+						Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
 						if (false == monster->GetIsActive()) {
 							if (true == monster->CASIsActive(false, true))
 								_timerQueue.add_timer(pl_id, EV_RANDOM_MOVE, 1000);
@@ -275,6 +275,58 @@ void Server::WorkerThread()
 			break;
 		case OP_NPC_MOVE:
 			std::cout << "OP_NPC_MOVE" << std::endl;
+			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
+
+			std::unordered_set<int> prevPlayerList;
+			GetNearPlayersList(key, prevPlayerList);
+
+			if (prevPlayerList.size() == 0) {
+				monster->SetIsActive(false); // 데이터 레이스 없음
+				break;
+			}
+
+			Pos prevPos = monster->GetPosition();
+			short x = 0;
+			short y = 0;
+			while (true) {
+				x = prevPos.x;
+				y = prevPos.y;
+				switch (rand() % 4) {
+				case DIR_UP: if (y > 0) y--; break;
+				case DIR_DOWN: if (y < W_HEIGHT - 1) y++; break;
+				case DIR_LEFT: if (x > 0) x--; break;
+				case DIR_RIGHT: if (x < W_WIDTH - 1) x++; break;
+				}
+				if (!can_go(x, y)) {
+					continue;;
+				}
+				break;
+			}
+			monster->SetPosition(x, y);
+			int sectorId = SetSectorId(*monster, key, x, y);
+
+			std::unordered_set<int> newPlayerList;
+			GetNearPlayersList(key, newPlayerList);
+
+			for (auto& cl : newPlayerList) {
+				Session* addPlayer = reinterpret_cast<Session*>(objects[cl]);
+				char c_visual = VI_PLAYER;
+				if (0 == prevPlayerList.count(cl)) {
+					addPlayer->send_add_player_packet(*(objects[key]), VI_NPC);				
+				}
+				else {
+					if (false == addPlayer->GetIsNpc())
+						addPlayer->send_move_packet(*(objects[key]), 0);
+				}
+				_timerQueue.add_timer(key, EV_RANDOM_MOVE, 1000);
+			}
+			for (auto& cl : prevPlayerList) {
+				if (0 == newPlayerList.count(cl)) {
+					Session* removePlayer = reinterpret_cast<Session*>(objects[cl]);
+					removePlayer->send_remove_player_packet(key);
+				}
+			}
+
 			break;
 		}
 	
@@ -344,7 +396,7 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 					exover->_cause_player_id = id;
 					PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
 
-					Monster* monster = reinterpret_cast<Monster*>(objects[id]);
+					Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
 					if (false == monster->GetIsActive()) {
 						bool input = false;
 						if (true == monster->CASIsActive(false, true))
@@ -364,8 +416,9 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 			if (false == addPlayer->GetIsNpc()) {
 				addPlayer->send_add_player_packet(*(objects[id]), VI_PLAYER);
 			}
-			else
+			else 
 				c_visual = VI_NPC;
+
 			movePlayer->send_add_player_packet(*(objects[cl]), c_visual);
 		}
 		else {
@@ -399,7 +452,7 @@ void Server::GetNearPlayersList(int id, std::unordered_set<int>& list)
 		sectors[index].GetPlayerList(playerList);
 
 		for (auto& p : playerList) {
-			Session* s = reinterpret_cast<Session*>(&(objects[p]));
+			Object* s = reinterpret_cast<Session*>(objects[p]);
 			if (s->GetIsNpc()) continue;
 			if (s->GetState() != ST_INGAME) continue;
 			if (can_see(s->GetId(), id))

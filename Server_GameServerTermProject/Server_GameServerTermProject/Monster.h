@@ -16,6 +16,7 @@ private:
 
 public:
 	bool GetIsActive() { return _is_active; }
+	void SetIsActive(bool newActive) { _is_active = newActive; }
 	bool CASIsActive(bool expect, bool update);
 };
 

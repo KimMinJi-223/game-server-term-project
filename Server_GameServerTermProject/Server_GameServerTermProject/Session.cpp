@@ -77,6 +77,7 @@ void Session::send_move_packet(Object& other, char dir)
 
 void Session::send_remove_player_packet(int c_id)
 {
+	printf("send_remove_player_packet");
 	_vll.lock();
 	if (0 == _view_list.count(c_id)) {
 		_vll.unlock();

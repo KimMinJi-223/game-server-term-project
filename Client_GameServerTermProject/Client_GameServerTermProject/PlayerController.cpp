@@ -85,7 +85,8 @@ void PlayerController::Update()
 		if (isPress) {
 			::send(socket, reinterpret_cast<char*>(&packet), sizeof(CS_MOVE_PACKET), 0);
 			player->_keyPressed = true;
-			_keyPressTime = 1.0f;
+			//_keyPressTime = 1.0f;
+			_keyPressTime = 0.1f;
 			return;
 		}
 	}

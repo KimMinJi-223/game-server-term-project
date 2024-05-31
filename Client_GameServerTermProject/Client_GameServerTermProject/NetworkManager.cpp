@@ -107,16 +107,33 @@ void NetworkManager::ProcessPacket(char* p)
 			avatar->SetState(PlayerState::Move);
 		}
 		else {
-			Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id];
-			player->SetPos(player->GetDestPos());
-			player->SetCellPos(VectorInt{ packet->x, packet->y });
-			player->SetDir(static_cast<Dir>(packet->direction));
-			player->SetState(PlayerState::Move);
+			if (id < MAX_USER) {
+				Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id];
+				player->SetPos(player->GetDestPos());
+				player->SetCellPos(VectorInt{ packet->x, packet->y });
+				player->SetDir(static_cast<Dir>(packet->direction));
+				player->SetState(PlayerState::Move);
+			}
+			else {
+				Monster* monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters[id];
+				monster->SetPos({ (float)packet->x * 30, (float)packet->y * 30 });;
+			}
 		}		break;
 	}
 
 	case static_cast<int>(SC_PACKET_ID::SC_REMOVE_PLAYER):
 	{
+		SC_REMOVE_PLAYER_PACKET* packet = reinterpret_cast<SC_REMOVE_PLAYER_PACKET*>(p);
+		int id = packet->id;
+		if (id == myId) {
+			break;
+		}
+		if (id < MAX_USER) {
+			GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players.erase(id);
+		}
+		else {
+			GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters.erase(id);
+		}
 			break;
 	}
 	case static_cast<int>(SC_PACKET_ID::SC_CHAT):
