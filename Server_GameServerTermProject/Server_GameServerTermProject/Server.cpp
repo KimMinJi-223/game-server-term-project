@@ -114,7 +114,7 @@ void Server::process_packet(int id, char* packet)
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 		Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
 		loginPlayer->SetName(p->name);
-		loginPlayer->SetPosition(14, 2/*rand() % W_WIDTH, rand() % W_HEIGHT*/);
+		loginPlayer->SetPosition(54, 11/*rand() % W_WIDTH, rand() % W_HEIGHT*/);
 		
 		Pos playerPos = loginPlayer->GetPosition();
 		int sectorId = (playerPos.x / SECTOR_SIZE) + ((playerPos.y / SECTOR_SIZE) * MULTIPLY_ROW);
@@ -175,7 +175,7 @@ void Server::process_packet(int id, char* packet)
 		break;
 	}
 	case CS_PACKET_ID::CS_MOVE: {
-		std::cout << "CS_MOVE" << std::endl;
+		//std::cout << "CS_MOVE" << std::endl;
 
 		CS_MOVE_PACKET* p = reinterpret_cast<CS_MOVE_PACKET*>(packet);
 		Session* movePlayer = reinterpret_cast<Session*>(objects[id]);
@@ -274,7 +274,7 @@ void Server::WorkerThread()
 			delete ex_over;
 			break;
 		case OP_NPC_MOVE:
-			std::cout << "OP_NPC_MOVE" << std::endl;
+			//std::cout << key << " OP_NPC_MOVE" << std::endl;
 			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
 
 			std::unordered_set<int> prevPlayerList;
@@ -284,11 +284,12 @@ void Server::WorkerThread()
 				monster->SetIsActive(false); // 데이터 레이스 없음
 				break;
 			}
-
+			_timerQueue.add_timer(key, EV_RANDOM_MOVE, 1000);
 			Pos prevPos = monster->GetPosition();
 			short x = 0;
 			short y = 0;
 			while (true) {
+				// 사면이 막힌 위치에 몬스터가 생성되면 스레드 하나가 while문을 계속 돈다
 				x = prevPos.x;
 				y = prevPos.y;
 				switch (rand() % 4) {
@@ -310,15 +311,12 @@ void Server::WorkerThread()
 
 			for (auto& cl : newPlayerList) {
 				Session* addPlayer = reinterpret_cast<Session*>(objects[cl]);
-				char c_visual = VI_PLAYER;
 				if (0 == prevPlayerList.count(cl)) {
 					addPlayer->send_add_player_packet(*(objects[key]), VI_NPC);				
 				}
 				else {
-					if (false == addPlayer->GetIsNpc())
-						addPlayer->send_move_packet(*(objects[key]), 0);
+					addPlayer->send_move_packet(*(objects[key]), 0);
 				}
-				_timerQueue.add_timer(key, EV_RANDOM_MOVE, 1000);
 			}
 			for (auto& cl : prevPlayerList) {
 				if (0 == newPlayerList.count(cl)) {
@@ -423,8 +421,9 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 		}
 		else {
 			// MOVE_PLAYER
-			if (false == addPlayer->GetIsNpc())
+			if (false == addPlayer->GetIsNpc()) {
 				addPlayer->send_move_packet(*(objects[id]), direction);
+			}
 		}
 	}
 	// REMOVE_PLAYER

@@ -2,7 +2,7 @@
 constexpr int PORT_NUM = 4000;
 constexpr int BUF_SIZE = 200;
 constexpr int MAX_USER = 17000;
-constexpr int NUM_NPC = 200;
+constexpr int NUM_NPC = 20000;
 
 constexpr int NAME_SIZE = 20;
 constexpr int CHAT_SIZE = 100;

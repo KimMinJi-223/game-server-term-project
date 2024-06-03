@@ -87,7 +87,7 @@ void NetworkManager::ProcessPacket(char* p)
 				Monster* monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters[id] = new Monster();
 				monster->SetPos(Vector{ (float)my_packet->x * 30, (float)my_packet->y * 30 });
 			}
-			else {
+			else { // erade하면 딜리트가 되나?
 				Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id] = new Player();
 				player->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
 				player->SetState(PlayerState::Idle);
@@ -108,15 +108,19 @@ void NetworkManager::ProcessPacket(char* p)
 		}
 		else {
 			if (id < MAX_USER) {
-				Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id];
-				player->SetPos(player->GetDestPos());
-				player->SetCellPos(VectorInt{ packet->x, packet->y });
-				player->SetDir(static_cast<Dir>(packet->direction));
-				player->SetState(PlayerState::Move);
+				auto player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players.find(id);
+				if (player == GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players.end())
+					break;
+				player->second->SetPos(player->second->GetDestPos());
+				player->second->SetCellPos(VectorInt{ packet->x, packet->y });
+				player->second->SetDir(static_cast<Dir>(packet->direction));
+				player->second->SetState(PlayerState::Move);
 			}
 			else {
-				Monster* monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters[id];
-				monster->SetPos({ (float)packet->x * 30, (float)packet->y * 30 });;
+				auto monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters.find(id);
+				if (monster == GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters.end())
+					break;
+				monster->second->SetPos({ (float)packet->x * 30, (float)packet->y * 30 });;
 			}
 		}		break;
 	}
@@ -132,7 +136,9 @@ void NetworkManager::ProcessPacket(char* p)
 			GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players.erase(id);
 		}
 		else {
+			unordered_map <int, Monster*>& mon = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters;
 			GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters.erase(id);
+			int a = 0;
 		}
 			break;
 	}

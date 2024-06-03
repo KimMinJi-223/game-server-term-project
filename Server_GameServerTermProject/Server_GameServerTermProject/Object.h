@@ -15,6 +15,10 @@ protected:
 	bool	_is_npc;
 
 public:
+	// 스트레스 테스트
+	int		_last_move_time;
+
+public:
 	void Init(int x, int y, int id, const char* name);
 
 public:
