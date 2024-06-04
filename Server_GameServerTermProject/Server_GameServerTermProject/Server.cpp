@@ -35,7 +35,7 @@ void Server::Init()
 	CreateIoCompletionPort(reinterpret_cast<HANDLE>(_listen_socket), _hiocp, 9999, 0);
 	_client_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 	_accept_over._comp_type = OP_ACCEPT;
-	AcceptEx(_listen_socket, _client_socket, _accept_over._send_buf, 0, addr_size + 16, addr_size + 16, 0, &_accept_over._over);
+	AcceptEx(_listen_socket, _client_socket, _accept_over._buff.GetBuff(), 0, addr_size + 16, addr_size + 16, 0, &_accept_over._over);
 	
 	_timerQueue.Init(_hiocp);
 	std::cout << "서버 부팅 완료" << std::endl;
@@ -247,13 +247,15 @@ void Server::WorkerThread()
 			}
 			ZeroMemory(&_accept_over._over, sizeof(_accept_over._over));
 			int addr_size = sizeof(SOCKADDR_IN);
-			AcceptEx(_listen_socket, _client_socket, _accept_over._send_buf, 0, addr_size + 16, addr_size + 16, 0, &_accept_over._over);
+			AcceptEx(_listen_socket, _client_socket, _accept_over._buff.GetBuff(), 0, addr_size + 16, addr_size + 16, 0, &_accept_over._over);
 			break;
 		}
 		case OP_RECV: {
- 			Session* player = reinterpret_cast<Session*>(objects[key]);
-			int remain_data = num_bytes + player->GetPrevRemain();
-			char* p = ex_over->_send_buf;
+			Session* player = reinterpret_cast<Session*>(objects[key]);
+			RecvBuffer* recvBuff = &(player->GetOverEXP()->_buff);
+			int remain_data = num_bytes + recvBuff->GetPrevRemain();
+			int frontIndex = recvBuff->GetRecvBuffFrontIndex();
+			char* p = recvBuff->GetBuff(frontIndex);
 			while (remain_data > 0) {
 				int packet_size = p[0];
 				if (packet_size <= remain_data) {
@@ -263,9 +265,20 @@ void Server::WorkerThread()
 				}
 				else break;
 			}
-			player->SetPrevRemain(remain_data);
-			if (remain_data > 0) {
-				memcpy(ex_over->_send_buf, p, remain_data);
+	
+			recvBuff->SetPrevRemain(remain_data);
+			recvBuff->SetAddRecvBuffRearIndex(num_bytes);
+			recvBuff->SetAddRecvBuffForntIndex(num_bytes);
+			if(remain_data > 0) { // 만족하면 rear와 front가 같지 않음
+				if ((recvBuff->GetRecvBuffRearIndex()) == BUF_SIZE) {
+					memcpy(recvBuff->GetBuff(), p, remain_data);
+					recvBuff->SetRecvBuffForntIndex(0);
+					recvBuff->SetRecvBuffRearIndex(remain_data);
+				}
+			}
+			else { // rear와 front가 같다. 0으로 위치를 옮긴다. 
+				recvBuff->SetRecvBuffForntIndex(0);
+				recvBuff->SetRecvBuffRearIndex(0);
 			}
 			player->do_recv();
 			break;

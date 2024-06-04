@@ -1,6 +1,6 @@
 #pragma once
 constexpr int PORT_NUM = 4000;
-constexpr int BUF_SIZE = 200;
+constexpr int BUF_SIZE = 1024;
 constexpr int MAX_USER = 17000;
 constexpr int NUM_NPC = 20000;
 
@@ -9,6 +9,8 @@ constexpr int CHAT_SIZE = 100;
 
 constexpr int W_WIDTH = 100;
 constexpr int W_HEIGHT = 100;
+
+constexpr int MAX_PACKET_SIZE = 150;
 
 enum OBJECT_VISUAL { VI_AVATAR, VI_PLAYER, VI_NPC };
 

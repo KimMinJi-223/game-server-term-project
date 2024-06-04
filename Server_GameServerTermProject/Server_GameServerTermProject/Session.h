@@ -16,7 +16,6 @@ private:
 	OVER_EXP _recv_over;
 	std::unordered_set <int> _view_list;
 	std::mutex	_vll;
-	int		_prev_remain;
 
 public:
 	void Init(int x, int y, int id, const char* name, SOCKET socket);
@@ -31,8 +30,7 @@ public:
 	void send_remove_player_packet(int c_id);
 
 public:
-	int GetPrevRemain() { return _prev_remain; }
-	void SetPrevRemain(int prev) { _prev_remain = prev; }
 	void GetRefViewList(std::unordered_set<int>& view);
+	OVER_EXP* GetOverEXP() { return &_recv_over; }
 };
 

@@ -130,6 +130,7 @@
     <ClCompile Include="Monster.cpp" />
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="OVER_EXP.cpp" />
+    <ClCompile Include="RecvBuffer.cpp" />
     <ClCompile Include="Sector.cpp" />
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="Server_GameServerTermProject.cpp" />
@@ -143,6 +144,7 @@
     <ClInclude Include="OVER_EXP.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="protocol.h" />
+    <ClInclude Include="RecvBuffer.h" />
     <ClInclude Include="Sector.h" />
     <ClInclude Include="Server.h" />
     <ClInclude Include="Session.h" />

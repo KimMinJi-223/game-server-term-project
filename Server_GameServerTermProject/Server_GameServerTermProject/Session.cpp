@@ -3,7 +3,6 @@
 void Session::Init(int x, int y, int id, const char* name, SOCKET socket)
 {
 	Object::Init(x, y, id, name);
-	_prev_remain = 0;
 	_socket = socket;
 }
 
@@ -11,8 +10,9 @@ void Session::do_recv()
 {
 	DWORD recv_flag = 0;
 	memset(&_recv_over._over, 0, sizeof(_recv_over._over));
-	_recv_over._wsabuf.len = BUF_SIZE - _prev_remain;
-	_recv_over._wsabuf.buf = _recv_over._send_buf + _prev_remain;
+	_recv_over._wsabuf.len = _recv_over._buff.GetBuffFreeSpace();
+	int rear = _recv_over._buff.GetRecvBuffRearIndex();
+	_recv_over._wsabuf.buf = _recv_over._buff.GetBuff(rear);
 	WSARecv(_socket, &_recv_over._wsabuf, 1, 0, &recv_flag,
 		&_recv_over._over, 0);
 }
