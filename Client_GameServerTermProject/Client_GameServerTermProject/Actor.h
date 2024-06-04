@@ -1,5 +1,6 @@
 #pragma once
 #include "pch.h"
+#include "..\..\Server_GameServerTermProject\Server_GameServerTermProject\protocol.h"
 class Component;
 class Collider;
 class Actor
@@ -19,6 +20,10 @@ public:
 	LAYER_TYPE GetLayer() { return _layer; }
 
 	Vector GetDestPos() { return _destPos; }
+
+	void SetName(char* name) { memcpy_s(_name, NAME_SIZE, name, NAME_SIZE); }
+	char* GetName() { return _name; }
+
 	void AddComponent(Component* component);
 	void RemoveComponent(Component* component);
 
@@ -32,4 +37,5 @@ protected:
 	LAYER_TYPE _layer = LAYER_OBJECT;
 	vector<Component*> _components;
 	int _hp = 100;
+	char _name[NAME_SIZE];
 };

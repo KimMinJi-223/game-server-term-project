@@ -42,7 +42,7 @@ void NetworkManager::Init(HWND hwnd)
 	// CS_LOGIN 해야함
 	CS_LOGIN_PACKET p;
 	p.size = sizeof(p);
-	p.type = static_cast<char>(CS_PACKET_ID::CS_LOGIN);
+	p.type = static_cast<char>(CS_LOGIN);
 	strcpy_s(p.name, "hello");
 	::send(socket, reinterpret_cast<char*>(&p), sizeof(p), 0);
 }
@@ -62,9 +62,9 @@ void NetworkManager::Update()
 
 void NetworkManager::ProcessPacket(char* p)
 {
-	switch (p[1])
+	switch (p[2])
 	{
-	case static_cast<int>(SC_PACKET_ID::SC_LOGIN_INFO):
+	case SC_LOGIN_INFO:
 	{
 		SC_LOGIN_INFO_PACKET* packet = reinterpret_cast<SC_LOGIN_INFO_PACKET*>(p);
 		myId = packet->id;
@@ -73,9 +73,9 @@ void NetworkManager::ProcessPacket(char* p)
 		avatar->SetCellPos(pos, true);
 	}
 	break;
-	case static_cast<int>(SC_PACKET_ID::SC_ADD_PLAYER):
+	case SC_ADD_OBJECT:
 	{
-		SC_ADD_PLAYER_PACKET* my_packet = reinterpret_cast<SC_ADD_PLAYER_PACKET*>(p);
+		SC_ADD_OBJECT_PACKET* my_packet = reinterpret_cast<SC_ADD_OBJECT_PACKET*>(p);
 		int id = my_packet->id;
 
 		if (id == myId) {
@@ -86,19 +86,21 @@ void NetworkManager::ProcessPacket(char* p)
 			if (my_packet->visual == VI_NPC) {
 				Monster* monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters[id] = new Monster();
 				monster->SetPos(Vector{ (float)my_packet->x * 30, (float)my_packet->y * 30 });
+			
 			}
 			else { // erade하면 딜리트가 되나?
 				Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id] = new Player();
 				player->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
 				player->SetState(PlayerState::Idle);
+				player->SetName(my_packet->name);
 			}
 		}
 
 		break;
 	}
-	case static_cast<int>(SC_PACKET_ID::SC_MOVE_PLAYER):
+	case SC_MOVE_OBJECT:
 	{
-		SC_MOVE_PLAYER_PACKET* packet = reinterpret_cast<SC_MOVE_PLAYER_PACKET*>(p);
+		SC_MOVE_OBJECT_PACKET* packet = reinterpret_cast<SC_MOVE_OBJECT_PACKET*>(p);
 		int id = packet->id;
 		if (id == myId) {
 			avatar->SetPos(avatar->GetDestPos());
@@ -125,9 +127,9 @@ void NetworkManager::ProcessPacket(char* p)
 		}		break;
 	}
 
-	case static_cast<int>(SC_PACKET_ID::SC_REMOVE_PLAYER):
+	case SC_REMOVE_OBJECT:
 	{
-		SC_REMOVE_PLAYER_PACKET* packet = reinterpret_cast<SC_REMOVE_PLAYER_PACKET*>(p);
+		SC_REMOVE_OBJECT_PACKET* packet = reinterpret_cast<SC_REMOVE_OBJECT_PACKET*>(p);
 		int id = packet->id;
 		if (id == myId) {
 			break;
@@ -142,18 +144,18 @@ void NetworkManager::ProcessPacket(char* p)
 		}
 			break;
 	}
-	case static_cast<int>(SC_PACKET_ID::SC_CHAT):
+	case SC_CHAT:
 	{
 		SC_CHAT_PACKET* my_packet = reinterpret_cast<SC_CHAT_PACKET*>(p);
 		HWND hListBox = GetDlgItem(_hwnd, 1000);
 		wchar_t message[(CHAT_SIZE + NAME_SIZE) / 2];
 
 		wchar_t name[NAME_SIZE / 2];
-		MultiByteToWideChar(CP_ACP, 0, my_packet->name, -1, name, NAME_SIZE / 2);
+		//MultiByteToWideChar(CP_ACP, 0, my_packet->name, -1, name, NAME_SIZE / 2);
 		wchar_t text[CHAT_SIZE/2];
 		MultiByteToWideChar(CP_ACP, 0, my_packet->mess, -1, text, CHAT_SIZE / 2);
 
-		swprintf(message, NAME_SIZE + CHAT_SIZE, L"[%s] : %s", name, text);
+		swprintf(message, NAME_SIZE + CHAT_SIZE, L"[%d] : %s", my_packet->id, text);
 	
 		SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)message);
 		SetDlgItemText(_hwnd, 2000, TEXT(""));
@@ -171,7 +173,7 @@ void NetworkManager::process_data(size_t io_byte)
 	int remain_data = io_byte + prev_remain;
 	char* p = recvBuffer;
 	while (remain_data > 0) {
-		int packet_size = p[0];
+		int packet_size = p[0] + p[1] * 256;
 		if (packet_size <= remain_data) {
 			ProcessPacket(p);
 			p = p + packet_size;
@@ -189,8 +191,8 @@ void NetworkManager::process_data(size_t io_byte)
 void NetworkManager::SendChat(const char* message)
 {
 	CS_CHAT_PACKET packet;
-	packet.size = strlen(message) + 2 + 1;
-	packet.type = static_cast<char>(CS_PACKET_ID::CS_CHAT);
-	memcpy_s(packet.mess, 100, message, 100);
+	packet.size = strlen(message) + 3 + 1;
+	packet.type = static_cast<char>(CS_CHAT);
+	memcpy_s(packet.mess, CHAT_SIZE, message, CHAT_SIZE);
 	send(socket, reinterpret_cast<char*>(&packet), packet.size, 0);
 }

@@ -30,7 +30,7 @@ void PlayerController::Update()
 	if (GET_SINGLE(InputManager)->GetButton(KeyType::W))
 	{
 		packet.size = sizeof(CS_MOVE_PACKET);
-		packet.type = static_cast<char>(CS_PACKET_ID::CS_MOVE);
+		packet.type = CS_MOVE;
 		packet.direction = DIR_UP;
 		// Send하기
 		isPress = true;
@@ -39,7 +39,7 @@ void PlayerController::Update()
 	else if (GET_SINGLE(InputManager)->GetButton(KeyType::S))
 	{
 		packet.size = sizeof(CS_MOVE_PACKET);
-		packet.type = static_cast<char>(CS_PACKET_ID::CS_MOVE);
+		packet.type = CS_MOVE;
 		packet.direction = DIR_DOWN;
 		// Send하기
 		isPress = true;
@@ -50,7 +50,7 @@ void PlayerController::Update()
 	else if (GET_SINGLE(InputManager)->GetButton(KeyType::A))
 	{
 		packet.size = sizeof(CS_MOVE_PACKET);
-		packet.type = static_cast<char>(CS_PACKET_ID::CS_MOVE);
+		packet.type = CS_MOVE;
 		packet.direction = DIR_LEFT;
 		// Send하기
 		isPress = true;
@@ -61,7 +61,7 @@ void PlayerController::Update()
 	else if (GET_SINGLE(InputManager)->GetButton(KeyType::D))
 	{
 		packet.size = sizeof(CS_MOVE_PACKET);
-		packet.type = static_cast<char>(CS_PACKET_ID::CS_MOVE);
+		packet.type = CS_MOVE;
 		packet.direction = DIR_RIGHT;
 		// Send하기
 		isPress = true;

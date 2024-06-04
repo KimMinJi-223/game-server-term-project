@@ -109,8 +109,8 @@ bool Server::can_go(int x, int y)
 
 void Server::process_packet(int id, char* packet)
 {
-	switch (static_cast<CS_PACKET_ID>(packet[1])) {
-	case CS_PACKET_ID::CS_LOGIN: {
+	switch (packet[2]) {
+	case CS_LOGIN: {
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 		Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
 		loginPlayer->SetName(p->name);
@@ -174,7 +174,7 @@ void Server::process_packet(int id, char* packet)
 		}
 		break;
 	}
-	case CS_PACKET_ID::CS_MOVE: {
+	case CS_MOVE: {
 		//std::cout << "CS_MOVE" << std::endl;
 
 		CS_MOVE_PACKET* p = reinterpret_cast<CS_MOVE_PACKET*>(packet);
@@ -182,19 +182,17 @@ void Server::process_packet(int id, char* packet)
 		process_move(movePlayer, id, p->direction);
 		break;
 	}
-	case CS_PACKET_ID::CS_CHAT: {
+	case CS_CHAT: {
 		CS_CHAT_PACKET* p = reinterpret_cast<CS_CHAT_PACKET*>(packet);
-		for (int i = 0; i < p->size - 2; ++i)
-			std::cout << p->mess[i];
+		std::cout << p->mess;
 		BroadCastChat(id, p->mess);
 		break;
 	}
-	case CS_PACKET_ID::CS_MOVE_STOP: {
-		CS_MOVE_STOP_PACKET* p = reinterpret_cast<CS_MOVE_STOP_PACKET*>(packet);
-		// move패킷을 보내는 타이머 이벤트의 경우 _is_moving이 true인지 확인해야함
-		std::cout << "CS_MOVE_STOP" << std::endl;
-		break;
-	}
+	//case CS_PACKET_ID::CS_MOVE_STOP: {
+	//	CS_MOVE_STOP_PACKET* p = reinterpret_cast<CS_MOVE_STOP_PACKET*>(packet);
+	//	std::cout << "CS_MOVE_STOP" << std::endl;
+	//	break;
+	//}
 	default:
 		std::cout << "정체불명 패킷" << std::endl;
 		break;
@@ -257,7 +255,7 @@ void Server::WorkerThread()
 			int frontIndex = recvBuff->GetRecvBuffFrontIndex();
 			char* p = recvBuff->GetBuff(frontIndex);
 			while (remain_data > 0) {
-				int packet_size = p[0];
+				unsigned short packet_size = (p[1] << 8) | p[0];
 				if (packet_size <= remain_data) {
 					process_packet(static_cast<int>(key), p);
 					p = p + packet_size;
@@ -352,9 +350,10 @@ void Server::BroadCastChat(int id, char* p)
 {
 	SC_CHAT_PACKET chatPacket;
 	chatPacket.size = sizeof(SC_CHAT_PACKET) - CHAT_SIZE + strlen(p) + 1;
-	chatPacket.type = static_cast<int>(SC_PACKET_ID::SC_CHAT);
-	strcpy_s(chatPacket.name, objects[id]->GetName());
-	memcpy_s(chatPacket.mess, 100, p, 100);
+	chatPacket.type = static_cast<int>(SC_CHAT);
+	chatPacket.id = id;
+	memcpy_s(chatPacket.mess, CHAT_SIZE, p, CHAT_SIZE);
+
 	for (int i = 0; i < MAX_USER; ++i) {
 		Session* player = reinterpret_cast<Session*>(objects[i]);
 		if (player->GetState() != ST_INGAME) continue;

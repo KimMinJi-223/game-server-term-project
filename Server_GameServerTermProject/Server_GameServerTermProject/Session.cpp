@@ -28,7 +28,7 @@ void Session::send_login_info_packet(OBJECT_VISUAL visual)
 	SC_LOGIN_INFO_PACKET p;
 	p.id = _id;
 	p.size = sizeof(SC_LOGIN_INFO_PACKET);
-	p.type = static_cast<char>(SC_PACKET_ID::SC_LOGIN_INFO);
+	p.type = SC_LOGIN_INFO;
 	p.visual = visual;
 	p.x = _pos.x;
 	p.y = _pos.y;
@@ -47,32 +47,36 @@ void Session::send_add_player_packet(Object& other, char c_visual)
 	_vll.unlock();
 
 	//printf("send_add_player_packet %d -> %d (%d, %d)\n", _id, other.GetId(), other.GetPosition().x, other.GetPosition().y);
-	SC_ADD_PLAYER_PACKET add_packet;
+	SC_ADD_OBJECT_PACKET add_packet;
+	add_packet.size = sizeof(SC_ADD_OBJECT_PACKET);
+	add_packet.type = SC_ADD_OBJECT;
 	add_packet.id = c_id;
 	add_packet.visual = c_visual;
-	strcpy_s(add_packet.name, other.GetName());
-	add_packet.size = sizeof(add_packet);
-	add_packet.type = static_cast<int>(SC_PACKET_ID::SC_ADD_PLAYER);
+	memcpy_s(add_packet.name, NAME_SIZE, _name, NAME_SIZE);
 
 	Pos pos = other.GetPosition();
 	add_packet.x = pos.x;
 	add_packet.y = pos.y;
+
+	strcpy_s(add_packet.name, other.GetName());
+
 	do_send(&add_packet);
 }
 
 void Session::send_move_packet(Object& other, char dir)
 {
 	//printf("%d -> %d send_move_packet\n", other.GetId(), _id);
-	SC_MOVE_PLAYER_PACKET p;
+	SC_MOVE_OBJECT_PACKET p;
+	p.size = sizeof(SC_MOVE_OBJECT_PACKET);
+	p.type = SC_MOVE_OBJECT;
 	p.id = other.GetId();
-	p.size = sizeof(SC_MOVE_PLAYER_PACKET);
-	p.type = static_cast<int>(SC_PACKET_ID::SC_MOVE_PLAYER);
-
+	p.direction = dir;
 	Pos pos = other.GetPosition();
 	p.x = pos.x;
 	p.y = pos.y;
-	p.direction = dir;
+	//p.direction = dir;
 	p.move_time = static_cast<Session*>(&other)->_last_move_time;
+
 	do_send(&p);
 }
 
@@ -87,10 +91,11 @@ void Session::send_remove_player_packet(int c_id)
 	_vll.unlock();
 
 	//printf("%d -> %d send_remove_player_packet\n", c_id, _id);
-	SC_REMOVE_PLAYER_PACKET p;
-	p.id = c_id;
+	SC_REMOVE_OBJECT_PACKET p;
 	p.size = sizeof(p);
-	p.type = static_cast<int>(SC_PACKET_ID::SC_REMOVE_PLAYER);
+	p.type = SC_REMOVE_OBJECT;
+	p.id = c_id;
+
 	do_send(&p);
 }
 
