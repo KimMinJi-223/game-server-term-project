@@ -7,7 +7,7 @@
 int main()
 {
 	std::wcout.imbue(std::locale("korean"));
-	Server* server = new Server();
+	Server* server = Server::GetInstance();
 	server->Init();
 	Timer* timer = server->GetTImer();
 	std::thread timerThread{ [&timer]() {timer->do_timer(); } };

@@ -11,10 +11,22 @@
 #pragma comment(lib, "WS2_32.lib")
 #pragma comment(lib, "MSWSock.lib")
 
+#include "include/lua.hpp"
+#pragma comment(lib, "lua54.lib")
+
 class Session;
 
 class Server
 {
+private:
+	Server() { }
+public:
+	static Server* GetInstance()
+{
+static Server s_instance;
+return &s_instance;	
+}
+
 private:
 	SOCKET _listen_socket;
 	SOCKET _client_socket;
@@ -38,11 +50,17 @@ public:
 	void process_move(Session* movePlayer, int id, char direction);
 	void GetNearPlayersList(int id, std::unordered_set<int>& list);
 	int SetSectorId(Object& obj, int id, int x, int y);
-public:
 
+	void AStar(int& x, int& y, int id);
+
+public:
 	int get_new_client_id();
 	bool can_see(int a, int b);
 	bool can_go(int x, int y);
 	Timer* GetTImer() { return &_timerQueue; }
+	
+public:
+	static int API_GetPosX(lua_State* L);
+	static int API_GetPosY(lua_State* L);
+	static int API_OkAStar(lua_State* L);
 };
-

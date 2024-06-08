@@ -6,6 +6,7 @@
 class Object
 {
 protected:
+	Pos _spawnPos;
 	Pos _pos;
 	int _id;
 	char _name[NAME_SIZE];
@@ -35,5 +36,8 @@ public:
 	bool GetIsNpc() { return _is_npc; }
 	void SetSectorId(int sectorId) { _sectorId = sectorId; }
 	int GetSectorId() { return _sectorId; }
+
+	void SetSpawnPos(Pos sPos) { _spawnPos = sPos; }
+	Pos GetSpawnPos(Pos sPos) { return _spawnPos; }
 };
 

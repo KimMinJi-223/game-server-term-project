@@ -6,7 +6,7 @@ class Monster : public FlipbookActor
 	using Super = FlipbookActor;
 	//UI ui;
 public:
-	Monster();
+	Monster(int visual);
 
 	Flipbook* _flipbookIdle[4] = {};
 	Flipbook* _flipbookMove[4] = {};

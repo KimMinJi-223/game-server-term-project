@@ -139,6 +139,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Defines.h" />
+    <ClInclude Include="include\lauxlib.h" />
+    <ClInclude Include="include\lua.h" />
+    <ClInclude Include="include\lua.hpp" />
+    <ClInclude Include="include\luaconf.h" />
+    <ClInclude Include="include\lualib.h" />
     <ClInclude Include="Monster.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="OVER_EXP.h" />
@@ -149,6 +154,9 @@
     <ClInclude Include="Server.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="Timer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="monster.lua" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="lua54.lib" />

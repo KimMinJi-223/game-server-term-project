@@ -7,6 +7,8 @@
 #include "Monster.h"
 #include <unordered_set>
 #include <fstream>
+#include <map>
+#include <queue>
 
 void Server::Init()
 {
@@ -46,10 +48,12 @@ void Server::initialize_npc()
 	std::cout << "NPC intialize begin.\n";
 	for (int i = 0; i < NUM_NPC; ++i) {
 		int npc_id = i + MAX_USER;
-		objects[npc_id] = new Monster();
+		Monster* monster = new Monster();
+		objects[npc_id] = monster;
 
 		int x = 0;
 		int y = 0;
+
 		while (true) {
 			x = rand() % W_WIDTH;
 			y = rand() % W_HEIGHT;
@@ -57,15 +61,12 @@ void Server::initialize_npc()
 				break;
 		}
 
+		monster->Init(npc_id, x, y);
+
 		int sectorId = (x / SECTOR_SIZE) + ((y / SECTOR_SIZE) * MULTIPLY_ROW);
 		objects[npc_id]->SetSectorId(sectorId);
 		sectors[sectorId].AddPlayerList(npc_id);
 		objects[npc_id]->SetState(ST_INGAME);
-
-		char name[NAME_SIZE];
-		sprintf_s(name, "M%d", i);
-		objects[npc_id]->Init(x, y, npc_id, name);
-		objects[npc_id]->SetIsNpc(true);
 	}
 	std::cout << "NPC initialize end.\n";
 }
@@ -80,12 +81,12 @@ void Server::LoadCollision(const char* fileName)
 		exit(-1);
 	}
 
-	for (int y = 0; y < W_HEIGHT; ++y)
+	for (int y = 0; y < 100; ++y)
 	{
 		std::wstring line;
 		ifs >> line;
 
-		for (int x = 0; x < W_WIDTH; ++x)
+		for (int x = 0; x < 100; ++x)
 		{
 			_collision[y][x] = line[x] - L'0';
 		}
@@ -107,6 +108,50 @@ bool Server::can_go(int x, int y)
 	return _collision[y][x] != 1;
 }
 
+int Server::API_GetPosX(lua_State* L)
+{
+	int id = (int)lua_tointeger(L, -1);
+	lua_pop(L, 2);
+	int x = Server::GetInstance()->objects[id]->GetPosition().x;
+	lua_pushnumber(L, x);
+	return 1;
+}
+
+int Server::API_GetPosY(lua_State* L)
+{
+	int id = (int)lua_tointeger(L, -1);
+	lua_pop(L, 2);
+	int y = Server::GetInstance()->objects[id]->GetPosition().y;
+	lua_pushnumber(L, y);
+	return 1;
+}
+
+int Server::API_OkAStar(lua_State* L)
+{
+	int monsterId = (int)lua_tointeger(L, -2);
+	int targetId = (int)lua_tointeger(L, -1);
+	lua_pop(L, 3);
+	Monster* monster = reinterpret_cast<Monster*>(Server::GetInstance()->objects[monsterId]);
+
+	// target이 -1이면 추적 종료
+	if (targetId == -1) {
+		monster->SetTarget(targetId);
+		monster->SetISAIMove(false);
+		monster->SetSpawnPos(monster->GetPosition());
+		return 0;
+	}
+
+	// 루아 할때는 락이여서 필요없다. 
+	if (monster->GetISAIMove()) // 이미 누구 따라가고 있다.
+		return 0;
+
+	monster->SetISAIMove(true);
+	monster->SetTarget(targetId);
+
+	if(!monster->GetIsRoaming())
+		Server::GetInstance()->GetTImer()->add_timer(monsterId, EV_RANDOM_MOVE, 1000);
+	return 0;
+}
 void Server::process_packet(int id, char* packet)
 {
 	switch (packet[2]) {
@@ -145,24 +190,29 @@ void Server::process_packet(int id, char* packet)
 				}
 				if (pl_id == id) 
 					continue;
-				if (true == can_see(pl_id, id)) {
-
-					// 이부분 함수로 뺴기 가능?
+				if (true == can_see(pl_id, id)) {				
 					if (true == cl.GetIsNpc()) {
 						OVER_EXP* exover = new OVER_EXP;
-						exover->_comp_type = OP_AI_HELLO;
-						exover->_cause_player_id = id;
-						PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
-						loginPlayer->send_add_player_packet(cl, VI_NPC);
-
 						Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
+
+						if (monster->GetIsAgro()) {
+							exover->_comp_type = OP_AI_LUA; // 이거는 어그로와 공격 그쪽으로 변경
+							exover->_cause_player_id = id;
+							PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
+						}
+
+						loginPlayer->send_add_player_packet(cl, monster->GetMonsterType());
+
 						if (false == monster->GetIsActive()) {
-							if (true == monster->CASIsActive(false, true))
-								_timerQueue.add_timer(pl_id, EV_RANDOM_MOVE, 1000);
+							if (true == monster->CASIsActive(false, true)) {
+								// 타이머가 호출되고 로밍 몬스터의 경우 영역에서 움직이는거를 루아가 계산한다. 
+								if(monster->GetIsRoaming())
+									_timerQueue.add_timer(pl_id, EV_RANDOM_MOVE, 1000);
+							}
 							continue;
 						}
 						else {
-							loginPlayer->send_add_player_packet(cl, VI_NPC);
+							loginPlayer->send_add_player_packet(cl, monster->GetMonsterType());
 						}
 					}
 					else {
@@ -255,7 +305,7 @@ void Server::WorkerThread()
 			int frontIndex = recvBuff->GetRecvBuffFrontIndex();
 			char* p = recvBuff->GetBuff(frontIndex);
 			while (remain_data > 0) {
-				unsigned short packet_size = (p[1] << 8) | p[0];
+				unsigned short packet_size = *reinterpret_cast<unsigned short*>(p);
 				if (packet_size <= remain_data) {
 					process_packet(static_cast<int>(key), p);
 					p = p + packet_size;
@@ -263,11 +313,11 @@ void Server::WorkerThread()
 				}
 				else break;
 			}
-	
+
 			recvBuff->SetPrevRemain(remain_data);
 			recvBuff->SetAddRecvBuffRearIndex(num_bytes);
 			recvBuff->SetAddRecvBuffForntIndex(num_bytes);
-			if(remain_data > 0) { // 만족하면 rear와 front가 같지 않음
+			if (remain_data > 0) { // 만족하면 rear와 front가 같지 않음
 				if ((recvBuff->GetRecvBuffRearIndex()) == BUF_SIZE) {
 					memcpy(recvBuff->GetBuff(), p, remain_data);
 					recvBuff->SetRecvBuffForntIndex(0);
@@ -284,37 +334,27 @@ void Server::WorkerThread()
 		case OP_SEND:
 			delete ex_over;
 			break;
-		case OP_NPC_MOVE:
-			//std::cout << key << " OP_NPC_MOVE" << std::endl;
+		case OP_NPC_MOVE: {
 			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
 
 			std::unordered_set<int> prevPlayerList;
 			GetNearPlayersList(key, prevPlayerList);
 
 			if (prevPlayerList.size() == 0) {
-				monster->SetIsActive(false); // 데이터 레이스 없음
+				monster->SetIsActive(false);
 				break;
 			}
-			_timerQueue.add_timer(key, EV_RANDOM_MOVE, 1000);
-			Pos prevPos = monster->GetPosition();
-			short x = 0;
-			short y = 0;
-			while (true) {
-				// 사면이 막힌 위치에 몬스터가 생성되면 스레드 하나가 while문을 계속 돈다
-				x = prevPos.x;
-				y = prevPos.y;
-				switch (rand() % 4) {
-				case DIR_UP: if (y > 0) y--; break;
-				case DIR_DOWN: if (y < W_HEIGHT - 1) y++; break;
-				case DIR_LEFT: if (x > 0) x--; break;
-				case DIR_RIGHT: if (x < W_WIDTH - 1) x++; break;
-				}
-				if (!can_go(x, y)) {
-					continue;;
-				}
-				break;
-			}
-			monster->SetPosition(x, y);
+
+			int x = 0;
+			int y = 0;
+
+			if (monster->GetISAIMove())
+				AStar(x, y, key);
+			else if (monster->GetIsRoaming())
+				monster->move(x, y);
+			else
+				continue;
+			
 			int sectorId = SetSectorId(*monster, key, x, y);
 
 			std::unordered_set<int> newPlayerList;
@@ -323,7 +363,7 @@ void Server::WorkerThread()
 			for (auto& cl : newPlayerList) {
 				Session* addPlayer = reinterpret_cast<Session*>(objects[cl]);
 				if (0 == prevPlayerList.count(cl)) {
-					addPlayer->send_add_player_packet(*(objects[key]), VI_NPC);				
+					addPlayer->send_add_player_packet(*(objects[key]), monster->GetMonsterType());
 				}
 				else {
 					addPlayer->send_move_packet(*(objects[key]), 0);
@@ -335,8 +375,22 @@ void Server::WorkerThread()
 					removePlayer->send_remove_player_packet(key);
 				}
 			}
-
 			break;
+		}
+		case OP_AI_LUA: {
+			// 해당 npc를 그리고 있는 클라는 여길 온다. 
+			// 어그로 몬스터가 A*할지 판단하는거
+			
+			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
+			Pos causePos = objects[ex_over->_cause_player_id]->GetPosition();
+			monster->IsAStar(ex_over->_cause_player_id, causePos.x, causePos.y);
+			break;
+		}
+		case OP_NPC_ATTACK: {
+			// NPC가 공격하는 것을 처리
+			// 공격은 서버에서 처리하자. 근데 루아에서 A*를 돌렸을때 플레이어가 앞에 있다면 이것이 실행되게 POST한다. 
+			break;
+		}
 		}
 	
 	}
@@ -402,15 +456,19 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 				new_vl.insert(pl_id);
 				if ((true == cl.GetIsNpc())) {
 					OVER_EXP* exover = new OVER_EXP;
-					exover->_comp_type = OP_AI_HELLO;
-					exover->_cause_player_id = id;
-					PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
-
 					Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
+
+					if (monster->GetIsAgro()) {
+						exover->_comp_type = OP_AI_LUA;
+						exover->_cause_player_id = id;
+						PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
+					}
+
 					if (false == monster->GetIsActive()) {
 						bool input = false;
 						if (true == monster->CASIsActive(false, true))
-							_timerQueue.add_timer(pl_id, EV_RANDOM_MOVE, 1000);
+							if(monster->GetIsRoaming())
+								_timerQueue.add_timer(pl_id, EV_RANDOM_MOVE, 1000);
 					}
 				}
 			}
@@ -426,8 +484,10 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 			if (false == addPlayer->GetIsNpc()) {
 				addPlayer->send_add_player_packet(*(objects[id]), VI_PLAYER);
 			}
-			else 
-				c_visual = VI_NPC;
+			else {
+				Monster* monster = reinterpret_cast<Monster*>(objects[cl]);
+				c_visual = monster->GetMonsterType();
+			}
 
 			movePlayer->send_add_player_packet(*(objects[cl]), c_visual);
 		}
@@ -485,6 +545,102 @@ int Server::SetSectorId(Object& obj, int id, int x, int y)
 	}
 
 	return sectorId;
+}
+
+
+
+void Server::AStar(int& x, int& y, int id)
+{
+	std::cout << "Astar\n";
+
+	static int DIR_COUNT = 4;
+	static int cost[] = { 10, 10, 10, 10 };
+	static Pos moveDir[] = { Pos{-1, 0}, Pos{0, -1}, Pos{1, 0}, Pos{0, 1} };
+	const int size = 50; 
+
+	Monster* monster = reinterpret_cast<Monster*>(objects[id]);
+	int target = monster->GerTarget();
+	Pos startPos = monster->GetPosition();
+	Pos destPos = objects[target]->GetPosition();
+
+	if (startPos == destPos)
+		return;
+
+	std::vector<Pos> _path;
+	std::vector<std::vector<bool>> closed(size, std::vector<bool>(size, false));
+
+	std::vector<std::vector<int>> best(size, std::vector<int>(size, INT32_MAX));
+
+	std::map<Pos, Pos> parent;
+
+	std::priority_queue<PQNode, std::vector<PQNode>, std::greater<PQNode>> pq;
+
+
+	{
+		int g = 0;
+		int h = 10 * (std::abs(destPos.y - startPos.y) + std::abs(destPos.x - startPos.x));
+		pq.push(PQNode{ g + h, g, startPos });
+		best[startPos.y - startPos.y + size/2][startPos.x - startPos.x + size / 2] = g + h;
+		parent[startPos] = startPos;
+	}
+
+	while (pq.empty() == false)
+	{
+		PQNode node = pq.top();
+		pq.pop();
+
+		if (closed[node.pos.y - startPos.y + size / 2][node.pos.x - startPos.x + size / 2])
+			continue;
+
+		closed[node.pos.y - startPos.y + size / 2][node.pos.x - startPos.x + size / 2] = true;
+
+		if (node.pos == destPos)
+			break;
+
+		for (int dir = 0; dir < DIR_COUNT; ++dir)
+		{
+			if (node.pos.x <= 0 || node.pos.y <= 0)
+				continue;
+			Pos nextPos = node.pos + moveDir[dir];
+
+			if (can_go(nextPos.x, nextPos.y) == false)
+				continue;
+
+			int g = node.g + cost[dir];
+			int h = 10 * (std::abs(destPos.y - nextPos.y) + std::abs(destPos.x - nextPos.x));
+
+			if (best[nextPos.y - startPos.y + size / 2][nextPos.x - startPos.x + size / 2] <= g + h)
+				continue;
+
+			best[nextPos.y - startPos.y + size / 2][nextPos.x - startPos.x + size / 2] = g + h;
+			pq.push(PQNode{ g + h, g, nextPos });
+			parent[nextPos] = node.pos;
+			if (parent.size() > 100)
+				int a = 0;
+		}
+	}
+
+	Pos pos = destPos;
+
+	_path.clear();
+
+	while (true)
+	{
+		_path.push_back(pos);
+
+		if (pos == parent[pos])
+			break;
+
+		pos = parent[pos];
+	}
+
+	reverse(_path.begin(), _path.end());
+
+	x = _path[1].x;
+	y = _path[1].y;
+	
+	Server::GetInstance()->GetTImer()->add_timer(id, EV_RANDOM_MOVE, 1000);
+	monster->SetPosition(x, y);
 }
 
 int Server::get_new_client_id()

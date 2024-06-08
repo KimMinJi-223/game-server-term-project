@@ -83,16 +83,17 @@ void NetworkManager::ProcessPacket(char* p)
 			avatar->SetState(PlayerState::Idle);
 		}
 		else {
-			if (my_packet->visual == VI_NPC) {
-				Monster* monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters[id] = new Monster();
-				monster->SetPos(Vector{ (float)my_packet->x * 30, (float)my_packet->y * 30 });
-			
-			}
-			else { // erade하면 딜리트가 되나?
+			if (my_packet->visual == VI_PLAYER) {
 				Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id] = new Player();
 				player->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
 				player->SetState(PlayerState::Idle);
 				player->SetName(my_packet->name);
+				
+			
+			}
+			else { 
+				Monster* monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters[id] = new Monster(my_packet->visual);
+				monster->SetPos(Vector{ (float)my_packet->x * 30, (float)my_packet->y * 30 });
 			}
 		}
 
@@ -173,7 +174,7 @@ void NetworkManager::process_data(size_t io_byte)
 	int remain_data = io_byte + prev_remain;
 	char* p = recvBuffer;
 	while (remain_data > 0) {
-		int packet_size = p[0] + p[1] * 256;
+		int packet_size = *reinterpret_cast<unsigned short*>(p);
 		if (packet_size <= remain_data) {
 			ProcessPacket(p);
 			p = p + packet_size;

@@ -38,7 +38,8 @@ void DevScene::Init()
 	GET_SINGLE(ResourceManager)->LoadTexture(L"PlayerUp", L"Sprite\\Player\\PlayerUp.bmp", RGB(128, 128, 128));
 	GET_SINGLE(ResourceManager)->LoadTexture(L"PlayerLeft", L"Sprite\\Player\\PlayerLeft.bmp", RGB(128, 128, 128));
 	GET_SINGLE(ResourceManager)->LoadTexture(L"PlayerRight", L"Sprite\\Player\\PlayerRight.bmp", RGB(128, 128, 128));
-	GET_SINGLE(ResourceManager)->LoadTexture(L"MonsterSnake", L"Sprite\\Monster\\Snake.bmp", RGB(128, 128, 128));
+
+	GET_SINGLE(ResourceManager)->LoadTexture(L"MonsterSnake", L"Sprite\\Monster\\Snake.bmp", RGB(128, 128, 128)); // 몬스터
 
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Start", L"Sprite\\UI\\Start.bmp");
 	GET_SINGLE(ResourceManager)->LoadTexture(L"Edit", L"Sprite\\UI\\Edit.bmp");
@@ -130,23 +131,23 @@ void DevScene::Init()
 		// MOVE
 		{
 			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"MonsterSnake");
-			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMoveUp");
-			fb->SetInfo({ texture, L"FB_MonsterMoveUp", {50, 50}, 0, 3, 0, 0.5f });
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMove1");
+			fb->SetInfo({ texture, L"FB_MonsterMoveUp1", {50, 50}, 0, 3, 0, 0.5f });
 		}
 		{
 			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"MonsterSnake");
-			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMoveDown");
-			fb->SetInfo({ texture, L"FB_MonsterMoveDown", {50, 50}, 0, 3, 1, 0.5f });
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMove2");
+			fb->SetInfo({ texture, L"FB_MonsterMoveUp2", {50, 50}, 1, 3, 1, 0.5f });
 		}
 		{
 			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"MonsterSnake");
-			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMoveLeft");
-			fb->SetInfo({ texture, L"FB_MonsterMoveLeft", {50, 50}, 0, 3, 2, 0.5f });
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMove3");
+			fb->SetInfo({ texture, L"FB_MonsterMoveUp3", {50, 50}, 2, 3, 2, 0.5f });
 		}
 		{
 			Texture* texture = GET_SINGLE(ResourceManager)->GetTexture(L"MonsterSnake");
-			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMoveRight");
-			fb->SetInfo({ texture, L"FB_MonsterMoveRight", {50, 50}, 0, 3, 3, 0.5f });
+			Flipbook* fb = GET_SINGLE(ResourceManager)->CreateFlipbook(L"FB_SnakeMove4");
+			fb->SetInfo({ texture, L"FB_MonsterMoveUp4", {50, 50}, 3, 3, 3, 0.5f });
 		}
 	}
 	// 언리얼 방식

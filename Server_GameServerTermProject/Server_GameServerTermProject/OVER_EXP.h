@@ -25,11 +25,11 @@ public:
 	}
 	OVER_EXP(char* packet)
 	{
-		_wsabuf.len = packet[0];
+		_wsabuf.len = *reinterpret_cast<unsigned short*>(packet);
 		_wsabuf.buf = _buff.GetBuff();
 		ZeroMemory(&_over, sizeof(_over));
 		_comp_type = OP_SEND;
-		memcpy(_buff.GetBuff(), packet, packet[0]);
+		memcpy(_buff.GetBuff(), packet, _wsabuf.len);
 	}
 };
 
