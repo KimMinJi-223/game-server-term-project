@@ -1,15 +1,12 @@
-#include <WS2tcpip.h>
-#include <MSWSock.h>
+#include "pch.h"
 #include "Player.h"
 #include "Monster.h"
 #include "NetworkManager.h"
 #include "SceneManager.h"
 #include "Scene.h"
 #include "Actor.h"
-#include <string>
 
-#pragma comment(lib, "WS2_32.lib")
-#pragma comment(lib, "MSWSock.lib")
+
 
 void NetworkManager::Init(HWND hwnd)
 {

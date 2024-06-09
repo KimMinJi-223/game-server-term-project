@@ -1,4 +1,12 @@
 #pragma once
+
+#include <WS2tcpip.h>
+#include <MSWSock.h>
+#pragma comment(lib, "WS2_32.lib")
+#pragma comment(lib, "MSWSock.lib")
+
+#include "..\..\Server_GameServerTermProject\Server_GameServerTermProject\protocol.h"
+
 #include "Types.h"
 #include "Defines.h"
 #include "Enums.h"
@@ -16,7 +24,6 @@
 #include <algorithm>
 #include <functional>
 #include <assert.h>
-using namespace std;
 
 // C++20
 #include <format>

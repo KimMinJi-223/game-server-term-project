@@ -1,5 +1,5 @@
 #pragma once
-#include "..\..\Server_GameServerTermProject\Server_GameServerTermProject\protocol.h"
+
 #include "FlipbookActor.h"
 
 class Flipbook;

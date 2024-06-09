@@ -1,6 +1,6 @@
 #pragma once
 #include "pch.h"
-#include "..\..\Server_GameServerTermProject\Server_GameServerTermProject\protocol.h"
+
 class Component;
 class Collider;
 class Actor

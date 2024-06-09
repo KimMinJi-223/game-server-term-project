@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "DevScene.h"
-#include "Utils.h"
 #include "InputManager.h"
 #include "TimeManager.h"
 #include "ResourceManager.h"

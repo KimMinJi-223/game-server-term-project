@@ -1,11 +1,9 @@
-#include "..\..\Server_GameServerTermProject\Server_GameServerTermProject\protocol.h"
-#include "Defines.h"
+#include "pch.h"
 #include "PlayerController.h"
 #include "SceneManager.h"
 #include "Scene.h"
 #include "InputManager.h"
 #include "TimeManager.h"
-#include "Enums.h"
 #include "NetworkManager.h"
 
 PlayerController::PlayerController()
@@ -27,7 +25,7 @@ void PlayerController::Update()
 {
 	bool isPress = false;
 	CS_MOVE_PACKET packet;
-	if (GET_SINGLE(InputManager)->GetButton(KeyType::W))
+	if (GET_SINGLE(InputManager)->GetButton(KeyType::Up))
 	{
 		packet.size = sizeof(CS_MOVE_PACKET);
 		packet.type = CS_MOVE;
@@ -36,7 +34,7 @@ void PlayerController::Update()
 		isPress = true;
 		player->_keyPressed = true;
 	}
-	else if (GET_SINGLE(InputManager)->GetButton(KeyType::S))
+	else if (GET_SINGLE(InputManager)->GetButton(KeyType::Down))
 	{
 		packet.size = sizeof(CS_MOVE_PACKET);
 		packet.type = CS_MOVE;
@@ -47,7 +45,7 @@ void PlayerController::Update()
 		player->_keyPressed = true;
 
 	}
-	else if (GET_SINGLE(InputManager)->GetButton(KeyType::A))
+	else if (GET_SINGLE(InputManager)->GetButton(KeyType::Left))
 	{
 		packet.size = sizeof(CS_MOVE_PACKET);
 		packet.type = CS_MOVE;
@@ -58,7 +56,7 @@ void PlayerController::Update()
 		player->_keyPressed = true;
 
 	}
-	else if (GET_SINGLE(InputManager)->GetButton(KeyType::D))
+	else if (GET_SINGLE(InputManager)->GetButton(KeyType::Right))
 	{
 		packet.size = sizeof(CS_MOVE_PACKET);
 		packet.type = CS_MOVE;
@@ -70,9 +68,12 @@ void PlayerController::Update()
 		
 
 	}
-	else if (GET_SINGLE(InputManager)->GetButton(KeyType::Q))
+	else if (GET_SINGLE(InputManager)->GetButtonDown(KeyType::Q))
 	{
-		// Send하기
+		CS_ATTACK_PACKET packet;
+		packet.size = sizeof(CS_ATTACK_PACKET);
+		packet.type = CS_ATTACK;
+		player->SetState(PlayerState::Skill);
 	}
 	else {
 		// 버튼 뗀경우 

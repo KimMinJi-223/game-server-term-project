@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Monster.h"
-#include "..\..\Server_GameServerTermProject\Server_GameServerTermProject\protocol.h"
 #include "ResourceManager.h"
 
 Monster::Monster(int visual)
