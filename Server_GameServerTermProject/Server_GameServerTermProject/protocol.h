@@ -13,8 +13,8 @@ constexpr int NUM_NPC_4 = NUM_NPC_3 + 50;
 constexpr int BUF_SIZE = 1024; // 내가 추가
 constexpr int MAX_PACKET_SIZE = 350; // 내가 추가
 
-constexpr int W_WIDTH = 200;
-constexpr int W_HEIGHT = 200;
+constexpr int W_WIDTH = 100;
+constexpr int W_HEIGHT = 100;
 
 // Packet ID
 constexpr char CS_LOGIN = 0;

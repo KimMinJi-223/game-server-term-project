@@ -81,12 +81,12 @@ void Server::LoadCollision(const char* fileName)
 		exit(-1);
 	}
 
-	for (int y = 0; y < 100; ++y)
+	for (int y = 0; y < W_WIDTH; ++y)
 	{
 		std::wstring line;
 		ifs >> line;
 
-		for (int x = 0; x < 100; ++x)
+		for (int x = 0; x < W_HEIGHT; ++x)
 		{
 			_collision[y][x] = line[x] - L'0';
 		}
@@ -135,8 +135,8 @@ int Server::API_OkAStar(lua_State* L)
 
 	// target이 -1이면 추적 종료
 	if (targetId == -1) {
-		monster->SetTarget(targetId);
 		monster->SetISAIMove(false);
+		monster->SetTarget(targetId);
 		monster->SetSpawnPos(monster->GetPosition());
 		return 0;
 	}
@@ -392,12 +392,12 @@ void Server::WorkerThread()
 			break;
 		}
 		}
-	
 	}
 }
 
 void Server::disconnect(int key)
 {
+
 }
 
 void Server::BroadCastChat(int id, char* p)
@@ -553,55 +553,76 @@ void Server::AStar(int& x, int& y, int id)
 {
 	std::cout << "Astar\n";
 
+	bool pathSuccess = false;
 	static int DIR_COUNT = 4;
 	static int cost[] = { 10, 10, 10, 10 };
 	static Pos moveDir[] = { Pos{-1, 0}, Pos{0, -1}, Pos{1, 0}, Pos{0, 1} };
-	const int size = 50; 
+	const int size = 11;
 
 	Monster* monster = reinterpret_cast<Monster*>(objects[id]);
-	int target = monster->GerTarget();
 	Pos startPos = monster->GetPosition();
+	int target = monster->GerTarget(); 
+	if (target == -1) {
+		x = startPos.x;
+		y = startPos.y;
+		std::cout << "-1이다\n";
+		return;
+	}
 	Pos destPos = objects[target]->GetPosition();
 
-	if (startPos == destPos)
+	if (startPos == destPos) 
 		return;
 
-	std::vector<Pos> _path;
+	// 최종 길을 저장
+	std::vector<Pos> path;
 	std::vector<std::vector<bool>> closed(size, std::vector<bool>(size, false));
-
+	// 각 노드에서 현재 가장 좋은 값
 	std::vector<std::vector<int>> best(size, std::vector<int>(size, INT32_MAX));
-
+	// 해당 노드를 발견한 노드
 	std::map<Pos, Pos> parent;
-
+	// 우선순위 큐, 현재 가장 좋은 노드를 선택하기 위한 노드
 	std::priority_queue<PQNode, std::vector<PQNode>, std::greater<PQNode>> pq;
 
-
-	{
-		int g = 0;
-		int h = 10 * (std::abs(destPos.y - startPos.y) + std::abs(destPos.x - startPos.x));
-		pq.push(PQNode{ g + h, g, startPos });
-		best[startPos.y - startPos.y + size/2][startPos.x - startPos.x + size / 2] = g + h;
-		parent[startPos] = startPos;
-	}
+	// 시작 위치를 큐에 넣는다. 
+	// F = G + H // G : 이동횟수, H : 목적지까지 예상 값
+	Pos indexOffset{ -startPos.x + (size / 2), -startPos.y + (size / 2) };
+	int g = 0;
+	int h = 10 * (std::abs(destPos.y - startPos.y) + std::abs(destPos.x - startPos.x));
+	pq.push(PQNode{ g + h, g, startPos });
+	best[startPos.y + indexOffset.y][startPos.x + indexOffset.x] = g + h;
+	parent[startPos] = startPos;
+	parent[destPos] = destPos;
 
 	while (pq.empty() == false)
 	{
 		PQNode node = pq.top();
 		pq.pop();
 
-		if (closed[node.pos.y - startPos.y + size / 2][node.pos.x - startPos.x + size / 2])
+		if (closed[node.pos.y + indexOffset.y][node.pos.x + indexOffset.x])
 			continue;
 
-		closed[node.pos.y - startPos.y + size / 2][node.pos.x - startPos.x + size / 2] = true;
+		closed[node.pos.y + indexOffset.y][node.pos.x + indexOffset.x] = true;
 
-		if (node.pos == destPos)
+		// 목적지면 종료
+		if (node.pos == destPos) {
+			pathSuccess = true;
 			break;
+		}
 
+		// 애당 위치에서 4방향의 노드 넣기
 		for (int dir = 0; dir < DIR_COUNT; ++dir)
 		{
-			if (node.pos.x <= 0 || node.pos.y <= 0)
-				continue;
 			Pos nextPos = node.pos + moveDir[dir];
+			// 맵을 나가나?
+			if (nextPos.x < 0 || nextPos.y >= W_WIDTH)
+				continue;
+			if (nextPos.y < 0 || nextPos.x >= W_HEIGHT)
+				continue;
+			// 몬스터의 위치에서 A*영역안에 있나?
+			if (nextPos.x + indexOffset.x < 0 || nextPos.x + indexOffset.x >= size)
+				continue;
+			if (nextPos.y + indexOffset.y < 0 || nextPos.y + indexOffset.y >= size)
+				continue;
 
 			if (can_go(nextPos.x, nextPos.y) == false)
 				continue;
@@ -609,36 +630,42 @@ void Server::AStar(int& x, int& y, int id)
 			int g = node.g + cost[dir];
 			int h = 10 * (std::abs(destPos.y - nextPos.y) + std::abs(destPos.x - nextPos.x));
 
-			if (best[nextPos.y - startPos.y + size / 2][nextPos.x - startPos.x + size / 2] <= g + h)
+			if (best[nextPos.y + indexOffset.y][nextPos.x + indexOffset.x] <= g + h)
 				continue;
 
-			best[nextPos.y - startPos.y + size / 2][nextPos.x - startPos.x + size / 2] = g + h;
+
+			best[nextPos.y + indexOffset.y][nextPos.x + indexOffset.x] = g + h;
 			pq.push(PQNode{ g + h, g, nextPos });
 			parent[nextPos] = node.pos;
-			if (parent.size() > 100)
-				int a = 0;
 		}
 	}
 
+	// 길을 못 찾으면 그 자리에서 안 움직이게
+	if (pathSuccess == false) {
+		x = startPos.x;
+		y = startPos.y;
+		Server::GetInstance()->GetTImer()->add_timer(id, EV_RANDOM_MOVE, 1000);
+		std::cout << "길 못 찾음..\n";
+		return;
+	}
 	Pos pos = destPos;
 
-	_path.clear();
+	path.clear();
 
 	while (true)
 	{
-		_path.push_back(pos);
+		path.push_back(pos);
 
 		if (pos == parent[pos])
 			break;
-
 		pos = parent[pos];
 	}
 
-	reverse(_path.begin(), _path.end());
+	reverse(path.begin(), path.end());
 
-	x = _path[1].x;
-	y = _path[1].y;
-	
+	x = path[1].x;
+	y = path[1].y;
+
 	Server::GetInstance()->GetTImer()->add_timer(id, EV_RANDOM_MOVE, 1000);
 	monster->SetPosition(x, y);
 }
