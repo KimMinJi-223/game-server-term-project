@@ -152,6 +152,7 @@ int Server::API_OkAStar(lua_State* L)
 		Server::GetInstance()->GetTImer()->add_timer(monsterId, EV_RANDOM_MOVE, 1000);
 	return 0;
 }
+
 void Server::process_packet(int id, char* packet)
 {
 	switch (packet[2]) {
@@ -238,11 +239,34 @@ void Server::process_packet(int id, char* packet)
 		BroadCastChat(id, p->mess);
 		break;
 	}
-	//case CS_PACKET_ID::CS_MOVE_STOP: {
-	//	CS_MOVE_STOP_PACKET* p = reinterpret_cast<CS_MOVE_STOP_PACKET*>(packet);
-	//	std::cout << "CS_MOVE_STOP" << std::endl;
-	//	break;
-	//}
+	case CS_ATTACK: {
+		// 현재 뷰리트스에서 방향에 맞는 몬스터가 누군지 검사해서 보내줘야함
+		int AttackedId = FindAttackedMonster(id);
+		if (AttackedId == -1)
+			break;
+
+		objects[id]->Attack(AttackedId);
+		objects[AttackedId]->SetPosition(0, 0);
+		Session* player = reinterpret_cast<Session*>(objects[id]);
+		player->send_move_packet(*objects[AttackedId], 0);
+		break;
+	}
+	case CS_A_SKILL: {
+		int findIds[4]{ -1, -1, -1, -1 };
+		int AttackedId = FindASkillMonster(id, findIds);
+		if (AttackedId == -1)
+			break;
+
+		for (int i = 0; i < 4; ++i) {
+			if (findIds[i] == -1)
+				continue;
+			objects[id]->Attack(findIds[i]);
+			objects[findIds[i]]->SetPosition(0, 0);
+			Session* player = reinterpret_cast<Session*>(objects[id]);
+			player->send_move_packet(*objects[findIds[i]], 0);
+		}
+		break;
+	}
 	default:
 		std::cout << "정체불명 패킷" << std::endl;
 		break;
@@ -430,6 +454,7 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 		return;
 	}
 	movePlayer->SetPosition(x, y);
+	movePlayer->SetDir(direction);
 
 	int sectorId = SetSectorId(*movePlayer, id, x, y);
 
@@ -546,8 +571,6 @@ int Server::SetSectorId(Object& obj, int id, int x, int y)
 
 	return sectorId;
 }
-
-
 
 void Server::AStar(int& x, int& y, int id)
 {
@@ -668,6 +691,67 @@ void Server::AStar(int& x, int& y, int id)
 
 	Server::GetInstance()->GetTImer()->add_timer(id, EV_RANDOM_MOVE, 1000);
 	monster->SetPosition(x, y);
+}
+
+int Server::FindAttackedMonster(int id)
+{
+	static Pos moveDir[] = { Pos{0, -1}, Pos{0, 1}, Pos{-1, 0}, Pos{1, 0} };
+	// 뷰리스트에서 몬스터 찾기
+	Session* player = reinterpret_cast<Session*>(objects[id]);
+	std::unordered_set<int> viewList;
+	player->GetRefViewList(viewList);
+	Pos playerPos = player->GetPosition();
+	int dir = player->GetDir();
+
+	for (auto objectId : viewList) {
+		if (!objects[objectId]->GetIsNpc())
+			continue;
+		Pos pos2 = objects[objectId]->GetPosition();
+
+		if(playerPos + moveDir[dir] == pos2){
+			return objectId;
+		}
+	}
+	return -1;
+}
+
+int Server::FindASkillMonster(int id, int* ids)
+{
+	static Pos moveDir[] = { Pos{0, -1}, Pos{0, 1}, Pos{-1, 0}, Pos{1, 0} };
+	// 뷰리스트에서 몬스터 찾기
+	Session* player = reinterpret_cast<Session*>(objects[id]);
+	std::unordered_set<int> viewList;
+	player->GetRefViewList(viewList);
+	Pos playerPos = player->GetPosition();
+	int dir = player->GetDir();
+
+	bool isFInd = false;
+
+	for (auto objectId : viewList) {
+		if (!objects[objectId]->GetIsNpc())
+			continue;
+		Pos pos2 = objects[objectId]->GetPosition();
+
+		if (playerPos + moveDir[DIR_UP] == pos2) {
+			ids[DIR_UP] = objectId;
+			isFInd = true;
+		}
+		else if (playerPos + moveDir[DIR_DOWN] == pos2) {
+			ids[DIR_DOWN] = objectId;
+			isFInd = true;
+		}
+		else if (playerPos + moveDir[DIR_LEFT] == pos2) {
+			ids[DIR_LEFT] = objectId;
+			isFInd = true;
+		}
+		else if (playerPos + moveDir[DIR_RIGHT] == pos2) {
+			ids[DIR_RIGHT] = objectId;
+			isFInd = true;
+		}
+	}
+	if(isFInd)
+		return 0;
+	return -1;
 }
 
 int Server::get_new_client_id()

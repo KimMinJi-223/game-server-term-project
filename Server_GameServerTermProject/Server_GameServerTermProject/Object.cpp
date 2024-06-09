@@ -9,3 +9,8 @@ void Object::Init(int x, int y, int id, const char* name)
 	_id = id;
 	strcpy_s(_name, name);
 }
+
+void Object::Attack(int target)
+{
+
+}

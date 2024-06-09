@@ -51,8 +51,10 @@ public:
 	void GetNearPlayersList(int id, std::unordered_set<int>& list);
 	int SetSectorId(Object& obj, int id, int x, int y);
 
+public:
 	void AStar(int& x, int& y, int id);
-
+	int FindAttackedMonster(int id);
+	int FindASkillMonster(int id, int* ids);
 public:
 	int get_new_client_id();
 	bool can_see(int a, int b);

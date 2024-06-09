@@ -12,6 +12,7 @@ protected:
 	char _name[NAME_SIZE];
 	S_STATE _state;
 	std::mutex _s_lock;
+	int _dir;
 	int _sectorId;
 	bool	_is_npc;
 
@@ -21,6 +22,9 @@ public:
 
 public:
 	void Init(int x, int y, int id, const char* name);
+
+public:
+	void Attack(int target);
 
 public:
 	std::mutex& GetStateMutex() { return _s_lock; }
@@ -36,7 +40,8 @@ public:
 	bool GetIsNpc() { return _is_npc; }
 	void SetSectorId(int sectorId) { _sectorId = sectorId; }
 	int GetSectorId() { return _sectorId; }
-
+	void SetDir(int dir) { _dir = dir; }
+	int GetDir() { return _dir; }
 	void SetSpawnPos(Pos sPos) { _spawnPos = sPos; }
 	Pos GetSpawnPos(Pos sPos) { return _spawnPos; }
 };

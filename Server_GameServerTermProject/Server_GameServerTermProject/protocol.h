@@ -4,7 +4,7 @@ constexpr int NAME_SIZE = 20;
 constexpr int CHAT_SIZE = 300;
 
 constexpr int MAX_USER = 10000;
-constexpr int NUM_NPC = 2000;
+constexpr int NUM_NPC = 200;
 constexpr int NUM_NPC_1 = MAX_USER + 50;
 constexpr int NUM_NPC_2 = NUM_NPC_1 + 50;
 constexpr int NUM_NPC_3 = NUM_NPC_2 + 50;
@@ -23,6 +23,7 @@ constexpr char CS_CHAT = 2;
 constexpr char CS_ATTACK = 3;			// 4 방향 공격
 constexpr char CS_TELEPORT = 4;			// RANDOM한 위치로 Teleport, Stress Test할 때 Hot Spot현상을 피하기 위해 구현
 constexpr char CS_LOGOUT = 5;			// 클라이언트에서 정상적으로 접속을 종료하는 패킷
+constexpr char CS_A_SKILL = 6; // 추가
 
 constexpr char SC_LOGIN_INFO = 2;
 constexpr char SC_LOGIN_FAIL = 3;
@@ -64,7 +65,17 @@ struct CS_CHAT_PACKET {
 	char	mess[CHAT_SIZE];
 };
 
-struct CS_ATTACK_PACKET {
+struct CS_ATTACK_PACKET { // 추가
+	unsigned short size;
+	char	type;
+};
+
+struct CS_A_ATTACK_PACKET { // 추가
+	unsigned short size;
+	char	type;
+};
+
+struct CS_A_SKILL_PACKET {
 	unsigned short size;
 	char	type;
 };
