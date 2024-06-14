@@ -73,7 +73,7 @@ void PlayerController::Update()
 		CS_ATTACK_PACKET packet;
 		packet.size = sizeof(CS_ATTACK_PACKET);
 		packet.type = CS_ATTACK;
-		player->SetState(PlayerState::Skill);
+		player->SetState(State::Skill);
 		player->Reset();
 		::send(socket, reinterpret_cast<char*>(&packet), sizeof(CS_ATTACK_PACKET), 0);
 	}
@@ -82,7 +82,7 @@ void PlayerController::Update()
 		CS_A_ATTACK_PACKET packet;
 		packet.size = sizeof(CS_A_ATTACK_PACKET);
 		packet.type = CS_A_SKILL;
-		player->SetState(PlayerState::Skill);
+		player->SetState(State::Skill);
 		player->Reset();
 		::send(socket, reinterpret_cast<char*>(&packet), sizeof(CS_A_ATTACK_PACKET), 0);
 	}

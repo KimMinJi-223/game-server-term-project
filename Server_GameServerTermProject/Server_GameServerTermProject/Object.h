@@ -16,6 +16,11 @@ protected:
 	int _sectorId;
 	bool	_is_npc;
 
+	int _hp;
+	int	_maxHp;
+	int	_exp;
+	int	_level;
+
 public:
 	// 스트레스 테스트
 	int		_last_move_time;
@@ -42,6 +47,12 @@ public:
 	int GetSectorId() { return _sectorId; }
 	void SetDir(int dir) { _dir = dir; }
 	int GetDir() { return _dir; }
+	void SetLevel(int level) { _level = level; }
+	int GetLevel() { return _level; }
+	void SetExp(int exp) { _exp = exp + _exp; }
+	int GetExp() { return _exp; }
+	void SetHp(int hp) { _hp = hp; }
+	int GetHp() { return _hp; }
 	void SetSpawnPos(Pos sPos) { _spawnPos = sPos; }
 	Pos GetSpawnPos(Pos sPos) { return _spawnPos; }
 };

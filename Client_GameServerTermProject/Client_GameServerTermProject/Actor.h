@@ -21,8 +21,20 @@ public:
 
 	Vector GetDestPos() { return _destPos; }
 
-	void SetName(char* name) { memcpy_s(_name, NAME_SIZE, name, NAME_SIZE); }
+	void SetName(const char* name) { 
+		memcpy_s(_name, NAME_SIZE, name, NAME_SIZE); 
+		int a = 0;
+	}
 	char* GetName() { return _name; }
+
+	void SetHp(int hp) { _hp = hp; }
+	int GetHp() { return _hp; }
+
+	void SetMaxHp(int hp) { _maxHp = hp; }
+	int GetMaxHp() { return _maxHp; }
+
+	void SetLevel(int level) { _level = level; }
+	int GetLevel() { return _level; }
 
 	void AddComponent(Component* component);
 	void RemoveComponent(Component* component);
@@ -36,6 +48,8 @@ protected:
 	Vector _destPos = { 0, 0 };
 	LAYER_TYPE _layer = LAYER_OBJECT;
 	vector<Component*> _components;
+	int _level;
 	int _hp = 100;
+	int _maxHp = 100;
 	char _name[NAME_SIZE];
 };

@@ -22,4 +22,5 @@ protected:
 	Flipbook* _flipbook = nullptr;
 	float _sumTime = 0.f;
 	int32 _idx = 0;
+	int id;
 };

@@ -5,6 +5,7 @@
 #include "TimeManager.h"
 #include "SceneManager.h"
 #include "Texture.h"
+#include "NetworkManager.h"
 
 FlipbookActor::FlipbookActor()
 {
@@ -69,6 +70,29 @@ void FlipbookActor::Render(HDC hdc)
 		info.line * info.size.y,
 		info.size.x, info.size.y,
 		info.texture->GetTransparent()); 
+
+	HFONT hFont = CreateFont(
+		10, 0, 0, 0,                  
+		FW_NORMAL, FALSE, FALSE, FALSE,              
+		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial");     
+
+	HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+	// ¿Ã∏ß
+	wchar_t name[NAME_SIZE / 2];
+	MultiByteToWideChar(CP_ACP, 0, GetName(), -1, name, NAME_SIZE / 2);
+	wstring str = std::format(L"{0}", name);
+	::TextOut(hdc, (int32)_pos.x - ((int32)cameraPos.x - GWinSizeX / 2) - str.size() * 2,
+		(int32)_pos.y - ((int32)cameraPos.y - GWinSizeY / 2) - 40,
+		str.c_str(), static_cast<int32>(str.size()));
+	str = std::format(L"L:{0}, HP:{1}", _level, _hp);
+	::TextOut(hdc, (int32)_pos.x - ((int32)cameraPos.x - GWinSizeX / 2) - str.size() * 2,
+		(int32)_pos.y - ((int32)cameraPos.y - GWinSizeY / 2) - 30,
+		str.c_str(), static_cast<int32>(str.size()));
+
+	SelectObject(hdc, hOldFont);
+
+	DeleteObject(hFont);
+
 }
 
 void FlipbookActor::SetFlipbook(Flipbook* flipbook)

@@ -18,3 +18,10 @@ if (ptr)					\
 	delete ptr;				\
 	ptr = nullptr;			\
 }
+
+enum class State
+{
+	Idle,
+	Move,
+	Skill,
+};

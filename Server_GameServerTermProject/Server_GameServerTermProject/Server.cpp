@@ -159,9 +159,8 @@ void Server::process_packet(int id, char* packet)
 	case CS_LOGIN: {
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 		Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
-		loginPlayer->SetName(p->name);
-		loginPlayer->SetPosition(54, 11/*rand() % W_WIDTH, rand() % W_HEIGHT*/);
-		
+		loginPlayer->Login(54, 11, p->name, 10, 1, 0);
+	
 		Pos playerPos = loginPlayer->GetPosition();
 		int sectorId = (playerPos.x / SECTOR_SIZE) + ((playerPos.y / SECTOR_SIZE) * MULTIPLY_ROW);
 		sectors[sectorId].AddPlayerList(id);
@@ -244,11 +243,13 @@ void Server::process_packet(int id, char* packet)
 		int AttackedId = FindAttackedMonster(id);
 		if (AttackedId == -1)
 			break;
-
+		
 		objects[id]->Attack(AttackedId);
+		objects[id]->SetExp(objects[AttackedId]->GetLevel());
 		objects[AttackedId]->SetPosition(0, 0);
 		Session* player = reinterpret_cast<Session*>(objects[id]);
 		player->send_move_packet(*objects[AttackedId], 0);
+		player->send_exp_change_packet();
 		break;
 	}
 	case CS_A_SKILL: {
@@ -261,9 +262,11 @@ void Server::process_packet(int id, char* packet)
 			if (findIds[i] == -1)
 				continue;
 			objects[id]->Attack(findIds[i]);
+			objects[id]->SetExp(objects[AttackedId]->GetLevel());
 			objects[findIds[i]]->SetPosition(0, 0);
 			Session* player = reinterpret_cast<Session*>(objects[id]);
 			player->send_move_packet(*objects[findIds[i]], 0);
+			player->send_exp_change_packet();
 		}
 		break;
 	}
@@ -390,7 +393,7 @@ void Server::WorkerThread()
 					addPlayer->send_add_player_packet(*(objects[key]), monster->GetMonsterType());
 				}
 				else {
-					addPlayer->send_move_packet(*(objects[key]), 0);
+					addPlayer->send_move_packet(*(objects[key]), objects[key]->GetDir());
 				}
 			}
 			for (auto& cl : prevPlayerList) {
@@ -691,6 +694,19 @@ void Server::AStar(int& x, int& y, int id)
 
 	Server::GetInstance()->GetTImer()->add_timer(id, EV_RANDOM_MOVE, 1000);
 	monster->SetPosition(x, y);
+
+	if (x == startPos.x) {
+		if (y - startPos.y == -1)
+			objects[id]->SetDir(DIR_UP);
+		else
+			objects[id]->SetDir(DIR_DOWN);
+	}
+	else {
+		if (x - startPos.x == -1)
+			objects[id]->SetDir(DIR_LEFT);
+		else
+			objects[id]->SetDir(DIR_RIGHT);
+	}
 }
 
 int Server::FindAttackedMonster(int id)

@@ -1,17 +1,10 @@
 #pragma once
 
 #include "FlipbookActor.h"
+#include "Defines.h"
 
 class Flipbook;
 class BoxCollider;
-
-enum class PlayerState
-{
-	Idle,
-	Move,
-	Skill,
-};
-
 class Player : public FlipbookActor
 {
 	using Super = FlipbookActor;
@@ -28,14 +21,16 @@ public:
 	virtual void TickMove();
 	virtual void TickSkill();
 
-	void SetState(PlayerState state);
+	void SetState(State state);
 	void SetDir(Dir dir);
 
 	void UpdateAnimation();
 
-	bool HasReachedDest();
 	bool CanGo(VectorInt cellPos);
 	void SetCellPos(VectorInt cellPos, bool teleport = false);
+
+	void SetEXP(int exp) { _exp = exp; }
+	int GetEXP() { return _exp; }
 
 	int id;
 	bool _keyPressed = false;
@@ -48,10 +43,10 @@ private:
 	VectorInt _cellPos = {};
 	Vector _speed = {};
 	Dir _dir = DIR_DOWN;
-	PlayerState _state = PlayerState::Idle;
+	State _state = State::Idle;
 
 	int _exp;
-	int _level;
+
 public:
 
 };

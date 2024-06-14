@@ -47,8 +47,8 @@ void Player::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetState(PlayerState::Move);
-	SetState(PlayerState::Idle);
+	SetState(State::Move);
+	SetState(State::Idle);
 
 	SetCellPos({ 5, 5 }, true);
 }
@@ -59,13 +59,13 @@ void Player::Tick()
 
 	switch (_state)
 	{
-	case PlayerState::Idle:
+	case State::Idle:
 		TickIdle();
 		break;
-	case PlayerState::Move:
+	case State::Move:
 		TickMove();
 		break;
-	case PlayerState::Skill:
+	case State::Skill:
 		TickSkill();
 		break;
 	}
@@ -76,22 +76,19 @@ void Player::Render(HDC hdc)
 	Super::Render(hdc);
 
 	::Rectangle(hdc, 50, 0, 150, 15);
-	::Rectangle(hdc, 50, 15, 150, 30);
 
 	HBRUSH hBrushRed = CreateSolidBrush(RGB(255, 0, 0));
 	HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrushRed);
-	::Rectangle(hdc, 50, 0, _hp + 50, 15);
+	::Rectangle(hdc, 50, 0, (((float)_hp / _maxHp) * 100) + 50, 15);
 	SelectObject(hdc, hOldBrush);
 	DeleteObject(hBrushRed);
 
-	HBRUSH hBrushGreen = CreateSolidBrush(RGB(0, 255, 0));
-	hOldBrush = (HBRUSH)SelectObject(hdc, hBrushGreen);
-	::Rectangle(hdc, 50, 15, _exp + 50, 30);
-	SelectObject(hdc, hOldBrush);
-	DeleteObject(hBrushGreen);
+	// exp
+	std::wstring str = std::format(L"EXP : {0}", _exp);
+	::TextOut(hdc, 50, 15, str.c_str(), static_cast<int32>(str.size()));
 
 	// ·¹º§
-	wstring str = std::format(L"LEVEL : {0}", _level);
+	str = std::format(L"LEVEL : {0}", _level);
 	::TextOut(hdc, 50, 30, str.c_str(), static_cast<int32>(str.size()));
 }
 
@@ -99,7 +96,7 @@ void Player::TickIdle()
 {
 	float deltaTime = GET_SINGLE(TimeManager)->GetDeltaTime();
 
-	if (_state == PlayerState::Idle)
+	if (_state == State::Idle)
 		UpdateAnimation();
 }
 
@@ -110,7 +107,7 @@ void Player::TickMove()
 	Vector dir = (_destPos - _pos);
 	if (dir.Length() < 2.0f || dir.Length() > 31.f)
 	{
-		SetState(PlayerState::Idle);
+		SetState(State::Idle);
 		_pos = _destPos;
 		//_keyPressed = false;
 	}
@@ -138,10 +135,10 @@ void Player::TickSkill()
 	float deltaTime = GET_SINGLE(TimeManager)->GetDeltaTime();
 
 	if (_idx == 7)
-		SetState(PlayerState::Idle);
+		SetState(State::Idle);
 }
 
-void Player::SetState(PlayerState state)
+void Player::SetState(State state)
 {
 	if (_state == state)
 		return;
@@ -160,25 +157,19 @@ void Player::UpdateAnimation()
 {
 	switch (_state)
 	{
-	case PlayerState::Idle:
+	case State::Idle:
 		if (_keyPressed)
 			SetFlipbook(_flipbookMove[_dir]);	
 		else
 			SetFlipbook(_flipbookIdle[_dir]);
 		break;
-	case PlayerState::Move:
+	case State::Move:
 		SetFlipbook(_flipbookMove[_dir]);
 		break;
-	case PlayerState::Skill:
+	case State::Skill:
 		SetFlipbook(_flipbookAttack[_dir]);
 		break;
 	}
-}
-
-bool Player::HasReachedDest()
-{
-	Vector dir = (_destPos - _pos);
-	return (dir.Length() < 10.f);
 }
 
 bool Player::CanGo(VectorInt cellPos)

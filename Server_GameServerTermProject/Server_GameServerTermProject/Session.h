@@ -19,7 +19,7 @@ private:
 
 public:
 	void Init(int x, int y, int id, const char* name, SOCKET socket);
-
+	void Login(int x, int y, const char* name, int hp, int level, int exp);
 public:
 	// 네트워크
 	void do_recv();
@@ -28,6 +28,7 @@ public:
 	void send_add_player_packet(Object& c_id, char c_visual);
 	void send_move_packet(Object& other, char dir);
 	void send_remove_player_packet(int c_id);
+	void send_exp_change_packet();
 
 public:
 	void GetRefViewList(std::unordered_set<int>& view);

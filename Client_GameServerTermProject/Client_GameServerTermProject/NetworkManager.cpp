@@ -6,8 +6,6 @@
 #include "Scene.h"
 #include "Actor.h"
 
-
-
 void NetworkManager::Init(HWND hwnd)
 {
 	_hwnd = hwnd;
@@ -40,6 +38,7 @@ void NetworkManager::Init(HWND hwnd)
 	CS_LOGIN_PACKET p;
 	p.size = sizeof(p);
 	p.type = static_cast<char>(CS_LOGIN);
+	avatar->SetName("hello");
 	strcpy_s(p.name, "hello");
 	::send(socket, reinterpret_cast<char*>(&p), sizeof(p), 0);
 }
@@ -66,7 +65,10 @@ void NetworkManager::ProcessPacket(char* p)
 		SC_LOGIN_INFO_PACKET* packet = reinterpret_cast<SC_LOGIN_INFO_PACKET*>(p);
 		myId = packet->id;
 		VectorInt pos = { packet->x, packet->y };
-
+		avatar->SetHp(packet->hp);
+		avatar->SetMaxHp(packet->max_hp);
+		avatar->SetEXP(packet->exp);
+		avatar->SetLevel(packet->level);
 		avatar->SetCellPos(pos, true);
 	}
 	break;
@@ -77,20 +79,24 @@ void NetworkManager::ProcessPacket(char* p)
 
 		if (id == myId) {
 			avatar->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
-			avatar->SetState(PlayerState::Idle);
+			avatar->SetState(State::Idle);
 		}
 		else {
 			if (my_packet->visual == VI_PLAYER) {
 				Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id] = new Player();
 				player->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
-				player->SetState(PlayerState::Idle);
+				player->SetState(State::Idle);
 				player->SetName(my_packet->name);
-				
-			
+				player->SetHp(my_packet->hp);
+				player->SetLevel(my_packet->level);
 			}
 			else { 
 				Monster* monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters[id] = new Monster(my_packet->visual);
-				monster->SetPos(Vector{ (float)my_packet->x * 30, (float)my_packet->y * 30 });
+				monster->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
+				monster->SetState(State::Idle);
+				monster->SetName(my_packet->name);
+				monster->SetHp(my_packet->hp);
+				monster->SetLevel(my_packet->level);
 			}
 		}
 
@@ -104,7 +110,7 @@ void NetworkManager::ProcessPacket(char* p)
 			avatar->SetPos(avatar->GetDestPos());
 			avatar->SetCellPos(VectorInt{ packet->x, packet->y });
 			avatar->SetDir(static_cast<Dir>(packet->direction));
-			avatar->SetState(PlayerState::Move);
+			avatar->SetState(State::Move);
 		}
 		else {
 			if (id < MAX_USER) {
@@ -114,13 +120,16 @@ void NetworkManager::ProcessPacket(char* p)
 				player->second->SetPos(player->second->GetDestPos());
 				player->second->SetCellPos(VectorInt{ packet->x, packet->y });
 				player->second->SetDir(static_cast<Dir>(packet->direction));
-				player->second->SetState(PlayerState::Move);
+				player->second->SetState(State::Move);
 			}
 			else {
 				auto monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters.find(id);
 				if (monster == GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters.end())
 					break;
-				monster->second->SetPos({ (float)packet->x * 30, (float)packet->y * 30 });;
+				monster->second->SetPos(monster->second->GetDestPos());
+				monster->second->SetCellPos(VectorInt{ packet->x, packet->y });
+				monster->second->SetDir(static_cast<Dir>(packet->direction));
+				monster->second->SetState(State::Move);
 			}
 		}		break;
 	}
@@ -149,15 +158,20 @@ void NetworkManager::ProcessPacket(char* p)
 		wchar_t message[(CHAT_SIZE + NAME_SIZE) / 2];
 
 		wchar_t name[NAME_SIZE / 2];
-		//MultiByteToWideChar(CP_ACP, 0, my_packet->name, -1, name, NAME_SIZE / 2);
+		MultiByteToWideChar(CP_ACP, 0, avatar->GetName(), -1, name, NAME_SIZE / 2);
 		wchar_t text[CHAT_SIZE/2];
 		MultiByteToWideChar(CP_ACP, 0, my_packet->mess, -1, text, CHAT_SIZE / 2);
-
-		swprintf(message, NAME_SIZE + CHAT_SIZE, L"[%d] : %s", my_packet->id, text);
+		swprintf(message, NAME_SIZE + CHAT_SIZE, L"[%s] : %s", name, text);
 	
 		SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)message);
 		SetDlgItemText(_hwnd, 2000, TEXT(""));
 		SendMessage(hListBox, LB_SETCARETINDEX, (WPARAM)(SendMessage(hListBox, LB_GETCOUNT, 0, 0) - 1), 0);
+		break;
+	}
+	case SC_EXP_CHANGE:
+	{
+		SC_EXP_CHANGE_PACKET* my_packet = reinterpret_cast<SC_EXP_CHANGE_PACKET*>(p);
+		avatar->SetEXP(my_packet->exp);
 		break;
 	}
 	default:

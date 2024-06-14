@@ -73,10 +73,10 @@ void Monster::move(int& x, int& y)
 		x = _pos.x;
 		y = _pos.y;
 		switch (rand() % 4) {
-		case DIR_UP: if (y > 0) y--; break;
-		case DIR_DOWN: if (y < W_HEIGHT - 1) y++; break;
-		case DIR_LEFT: if (x > 0) x--; break;
-		case DIR_RIGHT: if (x < W_WIDTH - 1) x++; break;
+		case DIR_UP: if (y > 0) y--; _dir = DIR_UP; break;
+		case DIR_DOWN: if (y < W_HEIGHT - 1) y++; _dir = DIR_DOWN; break;
+		case DIR_LEFT: if (x > 0) x--; _dir = DIR_LEFT; break;
+		case DIR_RIGHT: if (x < W_WIDTH - 1) x++; _dir = DIR_RIGHT; break;
 		}
 
 		if ((_spawnPos.x - x) * (_spawnPos.x - x) > _roamingArea * _roamingArea)

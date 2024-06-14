@@ -32,7 +32,7 @@ constexpr char SC_REMOVE_OBJECT = 5;
 constexpr char SC_MOVE_OBJECT = 6;
 constexpr char SC_CHAT = 7;
 constexpr char SC_STAT_CHANGE = 8; // 상태가 바뀌면 다 보내야한다고 하심
-
+constexpr char SC_EXP_CHANGE = 9;
 
 enum OBJECT_VISUAL { VI_AVATAR, VI_PLAYER, VI_MONSTER_1, VI_MONSTER_2, VI_MONSTER_3, VI_MONSTER_4 }; // 추가
 
@@ -107,6 +107,8 @@ struct SC_ADD_OBJECT_PACKET {
 	char	type;
 	int		id;
 	int		visual;				// 어떻게 생긴 OBJECT인가를 지시
+	int		hp;
+	int		level;
 	short	x, y;
 	char	name[NAME_SIZE];
 };
@@ -146,6 +148,12 @@ struct SC_STAT_CHANGE_PACKET {
 	int		max_hp;
 	int		exp;
 	int		level;
+};
+
+struct SC_EXP_CHANGE_PACKET {
+	unsigned short size;
+	char	type;
+	int		exp;
 };
 
 

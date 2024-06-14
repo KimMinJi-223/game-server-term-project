@@ -6,6 +6,17 @@ void Session::Init(int x, int y, int id, const char* name, SOCKET socket)
 	_socket = socket;
 }
 
+void Session::Login(int x, int y, const char* name, int hp, int level, int exp)
+{
+	_pos.x = x;
+	_pos.y = y;
+	strcpy_s(_name, NAME_SIZE, name);
+	_hp = hp;
+	_maxHp = DEFALUT_MAX_HP * level;
+	_level = level;
+	_exp = exp;
+}
+
 void Session::do_recv()
 {
 	DWORD recv_flag = 0;
@@ -26,12 +37,19 @@ void Session::do_send(void* packet)
 void Session::send_login_info_packet(OBJECT_VISUAL visual)
 {
 	SC_LOGIN_INFO_PACKET p;
-	p.id = _id;
 	p.size = sizeof(SC_LOGIN_INFO_PACKET);
 	p.type = SC_LOGIN_INFO;
 	p.visual = visual;
+	p.id = _id;
+
+	// DB에서 읽은거 넣어야함
+	p.hp = _hp;
+	p.max_hp = _maxHp;
+	p.exp = _exp;
+	p.level = _level;
 	p.x = _pos.x;
 	p.y = _pos.y;
+	///////////////////////
 	do_send(&p);
 }
 
@@ -52,6 +70,8 @@ void Session::send_add_player_packet(Object& other, char c_visual)
 	add_packet.type = SC_ADD_OBJECT;
 	add_packet.id = c_id;
 	add_packet.visual = c_visual;
+	add_packet.hp = other.GetHp();
+	add_packet.level = other.GetLevel();;
 	memcpy_s(add_packet.name, NAME_SIZE, _name, NAME_SIZE);
 
 	Pos pos = other.GetPosition();
@@ -95,6 +115,16 @@ void Session::send_remove_player_packet(int c_id)
 	p.size = sizeof(p);
 	p.type = SC_REMOVE_OBJECT;
 	p.id = c_id;
+
+	do_send(&p);
+}
+
+void Session::send_exp_change_packet()
+{
+	SC_EXP_CHANGE_PACKET p;
+	p.size = sizeof(p);
+	p.type = SC_EXP_CHANGE;
+	p.exp = _exp;
 
 	do_send(&p);
 }
