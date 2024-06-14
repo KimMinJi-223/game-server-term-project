@@ -64,5 +64,7 @@ public:
 public:
 	static int API_GetPosX(lua_State* L);
 	static int API_GetPosY(lua_State* L);
-	static int API_OkAStar(lua_State* L);
+	static int API_AStarStart(lua_State* L);
+	static int API_AStarEnd(lua_State* L);
+	static int API_AddTimer(lua_State* L);
 };

@@ -44,7 +44,9 @@ void Monster::Init(int id, int x, int y)
 
 	lua_register(_L, "API_GetPosX", Server::API_GetPosX);
 	lua_register(_L, "API_GetPosY", Server::API_GetPosY);
-	lua_register(_L, "API_OkAStar", Server::API_OkAStar);
+	lua_register(_L, "API_AStarStart", Server::API_AStarStart);
+	lua_register(_L, "API_AStarEnd", Server::API_AStarEnd);
+	lua_register(_L, "API_AddTimer", Server::API_AddTimer);
 
 	lua_getglobal(_L, "set_init");
 	lua_pushnumber(_L, id);
@@ -67,7 +69,8 @@ void Monster::move(int& x, int& y)
 	// 이 이동은 서버에서 다른거는 클라에서
 
 	// 서버에서 움직이는 상태
-	Server::GetInstance()->GetTImer()->add_timer(_id, EV_RANDOM_MOVE, 1000);
+	if (!_is_AI_move)
+		Server::GetInstance()->GetTImer()->add_timer(_id,-1, EV_RANDOM_MOVE, 1000);
 
 	while (true) {
 		x = _pos.x;

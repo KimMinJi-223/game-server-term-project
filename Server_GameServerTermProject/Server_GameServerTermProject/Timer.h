@@ -25,7 +25,7 @@ public:
 	void Init(HANDLE hiocp);
 
 public:
-	void add_timer(int obj_id, EVENT_TYPE et, int ms);
+	void add_timer(int obj_id, int targetId, EVENT_TYPE et, int ms);
 	void do_timer();
 
 };

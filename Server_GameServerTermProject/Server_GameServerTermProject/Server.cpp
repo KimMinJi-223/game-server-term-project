@@ -126,30 +126,44 @@ int Server::API_GetPosY(lua_State* L)
 	return 1;
 }
 
-int Server::API_OkAStar(lua_State* L)
+int Server::API_AStarStart(lua_State* L)
 {
 	int monsterId = (int)lua_tointeger(L, -2);
 	int targetId = (int)lua_tointeger(L, -1);
 	lua_pop(L, 3);
 	Monster* monster = reinterpret_cast<Monster*>(Server::GetInstance()->objects[monsterId]);
 
-	// target이 -1이면 추적 종료
-	if (targetId == -1) {
-		monster->SetISAIMove(false);
-		monster->SetTarget(targetId);
-		monster->SetSpawnPos(monster->GetPosition());
-		return 0;
-	}
-
-	// 루아 할때는 락이여서 필요없다. 
-	if (monster->GetISAIMove()) // 이미 누구 따라가고 있다.
-		return 0;
-
 	monster->SetISAIMove(true);
 	monster->SetTarget(targetId);
 
-	if(!monster->GetIsRoaming())
-		Server::GetInstance()->GetTImer()->add_timer(monsterId, EV_RANDOM_MOVE, 1000);
+	return 0;
+}
+
+int Server::API_AStarEnd(lua_State* L)
+{
+	int monsterId = (int)lua_tointeger(L, -1);
+	lua_pop(L, 2);
+	Monster* monster = reinterpret_cast<Monster*>(Server::GetInstance()->objects[monsterId]);
+
+	if(monster->GetIsRoaming())
+		Server::GetInstance()->GetTImer()->add_timer(monsterId, monsterId, EV_RANDOM_MOVE, 1000);
+
+	monster->SetISAIMove(false);
+	monster->SetTarget(-1);
+	monster->SetSpawnPos(monster->GetPosition());
+
+	return 0;
+}
+
+int Server::API_AddTimer(lua_State* L)
+{
+	int monsterId = (int)lua_tointeger(L, -4);
+	int targetId = (int)lua_tointeger(L, -3);
+	int timerType = (int)lua_tointeger(L, -2);
+	int time = (int)lua_tointeger(L, -1);
+	lua_pop(L, 5);
+
+	Server::GetInstance()->GetTImer()->add_timer(monsterId, targetId, static_cast<EVENT_TYPE>(timerType), time);
 	return 0;
 }
 
@@ -207,7 +221,7 @@ void Server::process_packet(int id, char* packet)
 							if (true == monster->CASIsActive(false, true)) {
 								// 타이머가 호출되고 로밍 몬스터의 경우 영역에서 움직이는거를 루아가 계산한다. 
 								if(monster->GetIsRoaming())
-									_timerQueue.add_timer(pl_id, EV_RANDOM_MOVE, 1000);
+									_timerQueue.add_timer(pl_id, -1, EV_RANDOM_MOVE, 1000);
 							}
 							continue;
 						}
@@ -363,10 +377,15 @@ void Server::WorkerThread()
 			break;
 		case OP_NPC_MOVE: {
 			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
-
+			delete ex_over;
+			// A* 중이면 랜덤이동 못하게
+			if (monster->GetISAIMove()) {
+				continue;
+			}
 			std::unordered_set<int> prevPlayerList;
 			GetNearPlayersList(key, prevPlayerList);
 
+			// 주변에 아무도 없으면 비활성하기
 			if (prevPlayerList.size() == 0) {
 				monster->SetIsActive(false);
 				break;
@@ -374,13 +393,8 @@ void Server::WorkerThread()
 
 			int x = 0;
 			int y = 0;
-
-			if (monster->GetISAIMove())
-				AStar(x, y, key);
-			else if (monster->GetIsRoaming())
-				monster->move(x, y);
-			else
-				continue;
+			
+			monster->move(x, y);
 			
 			int sectorId = SetSectorId(*monster, key, x, y);
 
@@ -402,15 +416,56 @@ void Server::WorkerThread()
 					removePlayer->send_remove_player_packet(key);
 				}
 			}
+			
 			break;
 		}
-		case OP_AI_LUA: {
-			// 해당 npc를 그리고 있는 클라는 여길 온다. 
-			// 어그로 몬스터가 A*할지 판단하는거
-			
+		case OP_AI_LUA: {		
 			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
 			Pos causePos = objects[ex_over->_cause_player_id]->GetPosition();
 			monster->IsAStar(ex_over->_cause_player_id, causePos.x, causePos.y);
+			delete ex_over;
+			break;
+		}
+		case OP_AI_MOVE: {
+			delete ex_over;
+			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
+			if (!monster->GetISAIMove()) {
+				continue;
+			}
+			std::unordered_set<int> prevPlayerList;
+			GetNearPlayersList(key, prevPlayerList);
+
+			// 주변에 아무도 없으면 비활성하기
+			if (prevPlayerList.size() == 0) {
+				monster->SetIsActive(false);
+				break;
+			}
+
+			int x = 0;
+			int y = 0;
+			AStar(x, y, key);
+			_timerQueue.add_timer(key, -1, EV_AI_MOVE, 1000);
+
+			int sectorId = SetSectorId(*monster, key, x, y);
+
+			std::unordered_set<int> newPlayerList;
+			GetNearPlayersList(key, newPlayerList);
+
+			for (auto& cl : newPlayerList) {
+				Session* addPlayer = reinterpret_cast<Session*>(objects[cl]);
+				if (0 == prevPlayerList.count(cl)) {
+					addPlayer->send_add_player_packet(*(objects[key]), monster->GetMonsterType());
+				}
+				else {
+					addPlayer->send_move_packet(*(objects[key]), objects[key]->GetDir());
+				}
+			}
+			for (auto& cl : prevPlayerList) {
+				if (0 == newPlayerList.count(cl)) {
+					Session* removePlayer = reinterpret_cast<Session*>(objects[cl]);
+					removePlayer->send_remove_player_packet(key);
+				}
+			}
 			break;
 		}
 		case OP_NPC_ATTACK: {
@@ -486,17 +541,19 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 					OVER_EXP* exover = new OVER_EXP;
 					Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
 
+					// 어그로 몬스터의 레이더 검사
 					if (monster->GetIsAgro()) {
 						exover->_comp_type = OP_AI_LUA;
 						exover->_cause_player_id = id;
 						PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
 					}
 
+					// 로밍 몬스터의 랜덤이동
 					if (false == monster->GetIsActive()) {
 						bool input = false;
 						if (true == monster->CASIsActive(false, true))
 							if(monster->GetIsRoaming())
-								_timerQueue.add_timer(pl_id, EV_RANDOM_MOVE, 1000);
+									_timerQueue.add_timer(pl_id, -1, EV_RANDOM_MOVE, 1000);
 					}
 				}
 			}
@@ -670,7 +727,7 @@ void Server::AStar(int& x, int& y, int id)
 	if (pathSuccess == false) {
 		x = startPos.x;
 		y = startPos.y;
-		Server::GetInstance()->GetTImer()->add_timer(id, EV_RANDOM_MOVE, 1000);
+		//Server::GetInstance()->GetTImer()->add_timer(id, EV_RANDOM_MOVE, 1000);
 		std::cout << "길 못 찾음..\n";
 		return;
 	}
@@ -692,7 +749,7 @@ void Server::AStar(int& x, int& y, int id)
 	x = path[1].x;
 	y = path[1].y;
 
-	Server::GetInstance()->GetTImer()->add_timer(id, EV_RANDOM_MOVE, 1000);
+	//Server::GetInstance()->GetTImer()->add_timer(id, EV_RANDOM_MOVE, 1000);
 	monster->SetPosition(x, y);
 
 	if (x == startPos.x) {

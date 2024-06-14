@@ -9,10 +9,11 @@ void Timer::Init(HANDLE hiocp)
 	_hiocp = hiocp;
 }
 
-void Timer::add_timer(int obj_id, EVENT_TYPE et, int ms)
+void Timer::add_timer(int obj_id, int targetId, EVENT_TYPE et, int ms)
 {
 	TIMER_EVENT ev;
 	ev.obj_id = obj_id;
+	ev.target_obj = targetId;
 	ev.event_type = et;
 	ev.wakeup_time = std::chrono::system_clock::now() + std::chrono::milliseconds(ms);
 	_timer_queue.push(ev);
@@ -37,6 +38,7 @@ void Timer::do_timer()
 				break;
 			case EV_AI_MOVE:
 				ov->_comp_type = OP_AI_MOVE;
+				ov->_cause_player_id = ev.target_obj;
 				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
 				break;
 			}
