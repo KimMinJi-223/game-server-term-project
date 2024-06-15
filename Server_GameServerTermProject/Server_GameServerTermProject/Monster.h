@@ -39,4 +39,5 @@ public:
 	bool GetIsRoaming() { return _isRoaming; }
 	bool GetIsAgro() { return _isAgro; }
 
+	virtual int GetExpOnDeath();
 };

@@ -64,6 +64,7 @@ void NetworkManager::ProcessPacket(char* p)
 	{
 		SC_LOGIN_INFO_PACKET* packet = reinterpret_cast<SC_LOGIN_INFO_PACKET*>(p);
 		myId = packet->id;
+		avatar->_id = myId;
 		VectorInt pos = { packet->x, packet->y };
 		avatar->SetHp(packet->hp);
 		avatar->SetMaxHp(packet->max_hp);
@@ -74,29 +75,29 @@ void NetworkManager::ProcessPacket(char* p)
 	break;
 	case SC_ADD_OBJECT:
 	{
-		SC_ADD_OBJECT_PACKET* my_packet = reinterpret_cast<SC_ADD_OBJECT_PACKET*>(p);
-		int id = my_packet->id;
+		SC_ADD_OBJECT_PACKET* packet = reinterpret_cast<SC_ADD_OBJECT_PACKET*>(p);
+		int id = packet->id;
 
 		if (id == myId) {
-			avatar->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
+			avatar->SetCellPos(VectorInt{ packet->x, packet->y }, true);
 			avatar->SetState(State::Idle);
 		}
 		else {
-			if (my_packet->visual == VI_PLAYER) {
+			if (id < MAX_USER) {
 				Player* player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players[id] = new Player();
-				player->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
+				player->SetCellPos(VectorInt{ packet->x, packet->y }, true);
 				player->SetState(State::Idle);
-				player->SetName(my_packet->name);
-				player->SetHp(my_packet->hp);
-				player->SetLevel(my_packet->level);
+				player->SetName(packet->name);
+				player->SetHp(packet->hp);
+				player->SetLevel(packet->level);
 			}
 			else { 
-				Monster* monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters[id] = new Monster(my_packet->visual);
-				monster->SetCellPos(VectorInt{ my_packet->x, my_packet->y }, true);
+				Monster* monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters[id] = new Monster(packet->visual);
+				monster->SetCellPos(VectorInt{ packet->x, packet->y }, true);
 				monster->SetState(State::Idle);
-				monster->SetName(my_packet->name);
-				monster->SetHp(my_packet->hp);
-				monster->SetLevel(my_packet->level);
+				monster->SetName(packet->name);
+				monster->SetHp(packet->hp);
+				monster->SetLevel(packet->level);
 			}
 		}
 
@@ -147,20 +148,19 @@ void NetworkManager::ProcessPacket(char* p)
 		else {
 			unordered_map <int, Monster*>& mon = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters;
 			GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters.erase(id);
-			int a = 0;
 		}
 			break;
 	}
 	case SC_CHAT:
 	{
-		SC_CHAT_PACKET* my_packet = reinterpret_cast<SC_CHAT_PACKET*>(p);
+		SC_CHAT_PACKET* packet = reinterpret_cast<SC_CHAT_PACKET*>(p);
 		HWND hListBox = GetDlgItem(_hwnd, 1000);
 		wchar_t message[(CHAT_SIZE + NAME_SIZE) / 2];
 
 		wchar_t name[NAME_SIZE / 2];
 		MultiByteToWideChar(CP_ACP, 0, avatar->GetName(), -1, name, NAME_SIZE / 2);
 		wchar_t text[CHAT_SIZE/2];
-		MultiByteToWideChar(CP_ACP, 0, my_packet->mess, -1, text, CHAT_SIZE / 2);
+		MultiByteToWideChar(CP_ACP, 0, packet->mess, -1, text, CHAT_SIZE / 2);
 		swprintf(message, NAME_SIZE + CHAT_SIZE, L"[%s] : %s", name, text);
 	
 		SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)message);
@@ -170,8 +170,44 @@ void NetworkManager::ProcessPacket(char* p)
 	}
 	case SC_EXP_CHANGE:
 	{
-		SC_EXP_CHANGE_PACKET* my_packet = reinterpret_cast<SC_EXP_CHANGE_PACKET*>(p);
-		avatar->SetEXP(my_packet->exp);
+		SC_EXP_CHANGE_PACKET* packet = reinterpret_cast<SC_EXP_CHANGE_PACKET*>(p);
+		avatar->SetEXP(packet->exp);
+		break;
+	}
+	case SC_HP_CHANGE:
+	{
+		SC_HP_CHANGE_PACKET* packet = reinterpret_cast<SC_HP_CHANGE_PACKET*>(p);
+		int id = packet->id;
+
+		if (id < MAX_USER) {
+			auto player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players.find(id);
+			if (player == GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players.end())
+				break;
+			player->second->SetHp(packet->hp);
+		}
+		else {
+			auto monster = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters.find(id);
+			if (monster == GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->monsters.end())
+				break;
+			monster->second->SetHp(packet->hp);
+		}
+		break;
+	}
+	case SC_LEVEL_CHANGE:
+	{
+		SC_LEVEL_CHANGE_PACKET* packet = reinterpret_cast<SC_LEVEL_CHANGE_PACKET*>(p);
+		int id = packet->id;
+		if (id == myId) {
+			avatar->SetLevel(packet->level);
+			avatar->SetEXP(packet->exp);
+			break;
+		}
+		auto player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players.find(id);
+		if (player == GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players.end())
+			break;
+		player->second->SetLevel(packet->level);
+		player->second->SetEXP(packet->exp);
+
 		break;
 	}
 	default:

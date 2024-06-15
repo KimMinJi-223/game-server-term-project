@@ -150,7 +150,9 @@ int Server::API_AStarEnd(lua_State* L)
 
 	monster->SetISAIMove(false);
 	monster->SetTarget(-1);
-	monster->SetSpawnPos(monster->GetPosition());
+	Pos pos = monster->GetPosition();
+	if(pos.x >= 0 && pos.y >= 0)
+		monster->SetSpawnPos(pos);
 
 	return 0;
 }
@@ -164,6 +166,9 @@ int Server::API_AddTimer(lua_State* L)
 	lua_pop(L, 5);
 
 	Server::GetInstance()->GetTImer()->add_timer(monsterId, targetId, static_cast<EVENT_TYPE>(timerType), time);
+	if (static_cast<EVENT_TYPE>(timerType) == EV_AI_MOVE) {
+		Server::GetInstance()->GetTImer()->add_timer(monsterId, targetId, EV_AI_LUA, time);
+	}
 	return 0;
 }
 
@@ -210,9 +215,11 @@ void Server::process_packet(int id, char* packet)
 						Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
 
 						if (monster->GetIsAgro()) {
-							exover->_comp_type = OP_AI_LUA; // 이거는 어그로와 공격 그쪽으로 변경
-							exover->_cause_player_id = id;
-							PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
+							if (!monster->GetISAIMove()) {
+								exover->_comp_type = OP_AI_LUA; // 이거는 어그로와 공격 그쪽으로 변경
+								exover->_cause_player_id = id;
+								PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
+							}
 						}
 
 						loginPlayer->send_add_player_packet(cl, monster->GetMonsterType());
@@ -253,17 +260,58 @@ void Server::process_packet(int id, char* packet)
 		break;
 	}
 	case CS_ATTACK: {
-		// 현재 뷰리트스에서 방향에 맞는 몬스터가 누군지 검사해서 보내줘야함
 		int AttackedId = FindAttackedMonster(id);
 		if (AttackedId == -1)
 			break;
 		
-		objects[id]->Attack(AttackedId);
-		objects[id]->SetExp(objects[AttackedId]->GetLevel());
-		objects[AttackedId]->SetPosition(0, 0);
 		Session* player = reinterpret_cast<Session*>(objects[id]);
-		player->send_move_packet(*objects[AttackedId], 0);
-		player->send_exp_change_packet();
+
+		int damage = objects[id]->GetPower();
+		bool isSuccess = false;;
+		int remainingHp = objects[AttackedId]->Damage(damage, isSuccess);
+		if (isSuccess) {
+			// 공격성공
+			std::unordered_set<int> PlayerList;
+			GetNearPlayersList(AttackedId, PlayerList);
+
+			if (remainingHp != 0) {
+				// 죽은건 아니면 체력을 수정
+				for (auto id : PlayerList) {
+					Session* Players = reinterpret_cast<Session*>(objects[id]);
+					Players->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
+				}
+			}
+			else {
+				// 몬스터 죽음
+				_timerQueue.add_timer(AttackedId, -1, EV_RESPAWN, 5000);
+				// 죽인 플레이어의 경험치 설정
+				if (objects[id]->SetExp(objects[AttackedId]->GetExpOnDeath())) {
+					player->send_level_change_packet(id, player->GetLevel(), player->GetExp());
+					
+					// 레벨업 뷰리스트에 있는 플레이어에게 보내기
+					std::unordered_set<int> nearPlayer;
+					player->GetRefViewList(nearPlayer);
+					for (auto playerId : nearPlayer) {
+						Session* otherPlayer = reinterpret_cast<Session*>(objects[playerId]);
+						otherPlayer->send_level_change_packet(id, player->GetLevel(), player->GetExp());
+					}
+
+				}
+				else {
+					// 경험치만 올리기
+					player->send_exp_change_packet();
+				}
+
+				// 모든 플레이어에게 remove보내기
+				for (auto id : PlayerList) {
+					objects[AttackedId]->SetPosition(-100, -100);
+					Session* Players = reinterpret_cast<Session*>(objects[id]);
+					Players->send_remove_player_packet(AttackedId);
+				}
+			}
+			
+		}
+
 		break;
 	}
 	case CS_A_SKILL: {
@@ -380,7 +428,7 @@ void Server::WorkerThread()
 			delete ex_over;
 			// A* 중이면 랜덤이동 못하게
 			if (monster->GetISAIMove()) {
-				continue;
+				break;
 			}
 			std::unordered_set<int> prevPlayerList;
 			GetNearPlayersList(key, prevPlayerList);
@@ -416,14 +464,6 @@ void Server::WorkerThread()
 					removePlayer->send_remove_player_packet(key);
 				}
 			}
-			
-			break;
-		}
-		case OP_AI_LUA: {		
-			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
-			Pos causePos = objects[ex_over->_cause_player_id]->GetPosition();
-			monster->IsAStar(ex_over->_cause_player_id, causePos.x, causePos.y);
-			delete ex_over;
 			break;
 		}
 		case OP_AI_MOVE: {
@@ -432,6 +472,7 @@ void Server::WorkerThread()
 			if (!monster->GetISAIMove()) {
 				continue;
 			}
+
 			std::unordered_set<int> prevPlayerList;
 			GetNearPlayersList(key, prevPlayerList);
 
@@ -444,7 +485,6 @@ void Server::WorkerThread()
 			int x = 0;
 			int y = 0;
 			AStar(x, y, key);
-			_timerQueue.add_timer(key, -1, EV_AI_MOVE, 1000);
 
 			int sectorId = SetSectorId(*monster, key, x, y);
 
@@ -468,11 +508,33 @@ void Server::WorkerThread()
 			}
 			break;
 		}
+		case OP_AI_LUA: {
+			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
+			Pos causePos = objects[ex_over->_cause_player_id]->GetPosition();
+			monster->IsAStar(ex_over->_cause_player_id, causePos.x, causePos.y);
+			delete ex_over;
+			break;
+		}
 		case OP_NPC_ATTACK: {
 			// NPC가 공격하는 것을 처리
 			// 공격은 서버에서 처리하자. 근데 루아에서 A*를 돌렸을때 플레이어가 앞에 있다면 이것이 실행되게 POST한다. 
 			break;
 		}
+		case OP_RESPAWN:
+			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
+			Pos pos = objects[key]->GetSpawnPos();
+			objects[key]->SetPosition(pos.x, pos.y);
+			objects[key]->SetHp(objects[key]->GetMaxHp());
+			SetSectorId(*objects[key], key, pos.x, pos.y);
+
+			std::unordered_set<int> playerList;
+			GetNearPlayersList(key, playerList);
+
+			for (auto playerId : playerList) {
+				Session* player = reinterpret_cast<Session*>(objects[playerId]);
+				player->send_add_player_packet(*objects[key], monster->GetMonsterType());
+			}
+			break;
 		}
 	}
 }
@@ -543,9 +605,11 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 
 					// 어그로 몬스터의 레이더 검사
 					if (monster->GetIsAgro()) {
-						exover->_comp_type = OP_AI_LUA;
-						exover->_cause_player_id = id;
-						PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
+						if (!monster->GetISAIMove()) {
+							exover->_comp_type = OP_AI_LUA;
+							exover->_cause_player_id = id;
+							PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
+						}
 					}
 
 					// 로밍 몬스터의 랜덤이동

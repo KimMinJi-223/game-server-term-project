@@ -7,7 +7,8 @@
 #include "CameraComponent.h"
 #include "SceneManager.h"
 #include "DevScene.h"
-#include <iostream>
+#include "NetworkManager.h"
+
 Player::Player()
 {
 	int a = sizeof(Player);
@@ -83,13 +84,15 @@ void Player::Render(HDC hdc)
 	SelectObject(hdc, hOldBrush);
 	DeleteObject(hBrushRed);
 
-	// exp
-	std::wstring str = std::format(L"EXP : {0}", _exp);
-	::TextOut(hdc, 50, 15, str.c_str(), static_cast<int32>(str.size()));
+	if (GET_SINGLE(NetworkManager)->GetInstance()->myId == _id) {
+		// exp
+		std::wstring str = std::format(L"EXP : {0}", _exp);
+		::TextOut(hdc, 50, 15, str.c_str(), static_cast<int32>(str.size()));
 
-	// 레벨
-	str = std::format(L"LEVEL : {0}", _level);
-	::TextOut(hdc, 50, 30, str.c_str(), static_cast<int32>(str.size()));
+		// 레벨
+		str = std::format(L"LEVEL : {0}", _level);
+		::TextOut(hdc, 50, 30, str.c_str(), static_cast<int32>(str.size()));
+	}
 }
 
 void Player::TickIdle()

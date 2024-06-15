@@ -29,6 +29,8 @@ public:
 	void send_move_packet(Object& other, char dir);
 	void send_remove_player_packet(int c_id);
 	void send_exp_change_packet();
+	void send_hp_change_packet(int id, int hp);
+	void send_level_change_packet(int id, int level, int exp);
 
 public:
 	void GetRefViewList(std::unordered_set<int>& view);

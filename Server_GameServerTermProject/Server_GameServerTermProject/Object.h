@@ -19,7 +19,9 @@ protected:
 	int _hp;
 	int	_maxHp;
 	int	_exp;
+	int	_maxExp;
 	int	_level;
+	int _power;
 
 public:
 	// 스트레스 테스트
@@ -30,6 +32,7 @@ public:
 
 public:
 	void Attack(int target);
+	int Damage(int damageValue, bool& isSuccess); // 체력을 반환
 
 public:
 	std::mutex& GetStateMutex() { return _s_lock; }
@@ -49,11 +52,16 @@ public:
 	int GetDir() { return _dir; }
 	void SetLevel(int level) { _level = level; }
 	int GetLevel() { return _level; }
-	void SetExp(int exp) { _exp = exp + _exp; }
+	bool SetExp(int exp); // 반환값은 레벨업 유무
 	int GetExp() { return _exp; }
 	void SetHp(int hp) { _hp = hp; }
 	int GetHp() { return _hp; }
+	void SetMaxHp(int hp) { _maxHp = hp; }
+	int GetMaxHp() { return _maxHp; }
 	void SetSpawnPos(Pos sPos) { _spawnPos = sPos; }
-	Pos GetSpawnPos(Pos sPos) { return _spawnPos; }
+	Pos GetSpawnPos() { return _spawnPos; }
+	void SetPower(int power) { _power = power; }
+	int GetPower() { return _power; }
+	virtual int GetExpOnDeath() { return 0; }
 };
 

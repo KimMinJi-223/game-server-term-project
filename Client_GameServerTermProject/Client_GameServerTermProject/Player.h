@@ -32,7 +32,7 @@ public:
 	void SetEXP(int exp) { _exp = exp; }
 	int GetEXP() { return _exp; }
 
-	int id;
+	int _id;
 	bool _keyPressed = false;
 
 private:

@@ -41,7 +41,17 @@ void Timer::do_timer()
 				ov->_cause_player_id = ev.target_obj;
 				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
 				break;
+			case EV_AI_LUA:
+				ov->_comp_type = OP_AI_LUA;
+				ov->_cause_player_id = ev.target_obj;
+				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
+				break;
+			case EV_RESPAWN:
+				ov->_comp_type = OP_RESPAWN;
+				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
+				break;
 			}
+
 			continue;
 		}
 

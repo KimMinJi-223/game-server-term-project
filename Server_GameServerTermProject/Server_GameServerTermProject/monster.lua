@@ -54,10 +54,13 @@ function IsAStar(playerId, x, y)
         -- 1 : A스타 이동
         API_AddTimer(myid, playerId, 1,  1000);
         target = playerId;
+        return
     end
+    	
 
     --타겟이라면?
     if(playerId == target) then 
+
         my_x = API_GetPosX(myid);
         my_y = API_GetPosY(myid);
 
@@ -72,6 +75,7 @@ function IsAStar(playerId, x, y)
             return
         end
         -- 1 : A스타 이동
-        --API_AddTimer(myid, playerId, 1, 1000);
+        API_AddTimer(myid, playerId, 1, 1000);
+        return
     end
 end

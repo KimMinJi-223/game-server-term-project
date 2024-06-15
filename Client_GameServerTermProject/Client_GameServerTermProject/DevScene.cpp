@@ -183,7 +183,7 @@ void DevScene::Init()
 		Player* player = new Player();
 		//AddActor(player);
 		avatar = player;
-		avatar->id = 0;
+		avatar->_id = 0;
 		CameraComponent* camera = new CameraComponent();
 		player->AddComponent(camera);
 	}

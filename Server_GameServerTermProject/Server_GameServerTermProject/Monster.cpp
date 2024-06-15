@@ -1,6 +1,7 @@
 #include "Monster.h"
 #include "Server.h"
 #include <iostream>
+
 void Monster::Init(int id, int x, int y)
 {
 	if((id - MAX_USER) % 10000 == 0)
@@ -99,6 +100,16 @@ bool Monster::CASIsActive(bool expect, bool update)
 {
 	bool input = expect;
 	return atomic_compare_exchange_strong(&_is_active, &input, update);
+}
+
+int Monster::GetExpOnDeath()
+{
+	int exp = _level * _level * 2;
+	if (_isAgro)
+		exp *= 2;
+	if (_isRoaming)
+		exp *= 2;
+	return exp;
 }
 
 void Monster::AddTimer(int id)

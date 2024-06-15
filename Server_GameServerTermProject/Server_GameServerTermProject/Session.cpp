@@ -15,6 +15,8 @@ void Session::Login(int x, int y, const char* name, int hp, int level, int exp)
 	_maxHp = DEFALUT_MAX_HP * level;
 	_level = level;
 	_exp = exp;
+	_power = 100;
+	_maxExp = DEFALUT_EXP * pow(2, _level - 1);
 }
 
 void Session::do_recv()
@@ -125,6 +127,29 @@ void Session::send_exp_change_packet()
 	p.size = sizeof(p);
 	p.type = SC_EXP_CHANGE;
 	p.exp = _exp;
+
+	do_send(&p);
+}
+
+void Session::send_hp_change_packet(int id, int hp)
+{
+	SC_HP_CHANGE_PACKET p;
+	p.size = sizeof(SC_HP_CHANGE_PACKET);
+	p.type = SC_HP_CHANGE;
+	p.id = id;
+	p.hp = hp;
+
+	do_send(&p);
+}
+
+void Session::send_level_change_packet(int id, int level, int exp)
+{
+	SC_LEVEL_CHANGE_PACKET p;
+	p.size = sizeof(SC_LEVEL_CHANGE_PACKET);
+	p.type = SC_LEVEL_CHANGE;
+	p.id = id;
+	p.level = level;
+	p.exp = exp;
 
 	do_send(&p);
 }

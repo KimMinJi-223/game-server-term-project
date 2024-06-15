@@ -20,7 +20,7 @@ public:
 private:
 	VectorInt _cellPos = {};
 	Dir _dir = DIR_DOWN;
-	Vector _speed = {30, 30};
+	Vector _speed = {50, 50};
 	State _state = State::Idle;
 };
 
