@@ -22,7 +22,7 @@ enum MONSTER_MOVE_STATE {
 constexpr int DEFALUT_EXP = 100;
 constexpr int DEFALUT_MAX_HP = 100;
 
-constexpr int VIEW_RANGE = 10;
+constexpr int VIEW_RANGE = 7;
 
 constexpr int SECTOR_SIZE = 10;
 constexpr int SECTOR_COUNT = (W_WIDTH / SECTOR_SIZE) * (W_HEIGHT / SECTOR_SIZE);

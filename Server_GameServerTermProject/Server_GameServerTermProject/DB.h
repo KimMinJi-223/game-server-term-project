@@ -12,7 +12,7 @@
 
 struct DB_EVENT {
 	Session*	player;
-	SQLWCHAR* sqlArr; // 명령문
+	wchar_t sqlArr[100]; // 명령문
 	EVENT_TYPE event_type; // 스위치 문에서호출할 함수 정하기
 };
 
@@ -32,12 +32,12 @@ private:
 public:
 	void Init(HANDLE hiocp);
 	void do_db();
-	void add_exec(Session* player, SQLWCHAR* sql, EVENT_TYPE et);
+	void add_exec(Session* player, const wchar_t* sql, EVENT_TYPE et);
 
 public:
-	bool ExecDirect(EXEC_TYPE exec, SQLWCHAR* sqlArr, Session* player);
+	bool ExecDirect(EXEC_TYPE exec, const wchar_t* sqlArr, Session* player);
 	void connect();
-	bool send_login(SQLWCHAR* sqlArr, Session* player);
+	bool send_login(const wchar_t* sqlArr, Session* player);
 	//void send_logout();
 	//void send_update();
 };

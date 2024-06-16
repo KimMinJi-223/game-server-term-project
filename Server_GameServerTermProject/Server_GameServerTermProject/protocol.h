@@ -4,17 +4,17 @@ constexpr int NAME_SIZE = 20;
 constexpr int CHAT_SIZE = 300;
 
 constexpr int MAX_USER = 10000;
-constexpr int NUM_NPC = 200;
-constexpr int NUM_NPC_1 = MAX_USER + 50;
-constexpr int NUM_NPC_2 = NUM_NPC_1 + 50;
-constexpr int NUM_NPC_3 = NUM_NPC_2 + 50;
-constexpr int NUM_NPC_4 = NUM_NPC_3 + 50;
+constexpr int NUM_NPC = 200000;
+constexpr int NUM_NPC_1 = MAX_USER + 50000;
+constexpr int NUM_NPC_2 = NUM_NPC_1 + 50000;
+constexpr int NUM_NPC_3 = NUM_NPC_2 + 50000;
+constexpr int NUM_NPC_4 = NUM_NPC_3 + 50000;
 
 constexpr int BUF_SIZE = 1024; // 추가
 constexpr int MAX_PACKET_SIZE = 350; // 추가
 
-constexpr int W_WIDTH = 100;
-constexpr int W_HEIGHT = 100;
+constexpr int W_WIDTH = 2000;
+constexpr int W_HEIGHT = 2000;
 
 // Packet ID
 constexpr char CS_LOGIN = 0;

@@ -55,6 +55,14 @@ void Session::send_login_info_packet(OBJECT_VISUAL visual)
 	do_send(&p);
 }
 
+void Session::send_login_fail_packet()
+{
+	SC_LOGIN_FAIL_PACKET p;
+	p.size = sizeof(SC_LOGIN_FAIL_PACKET);
+	p.type = SC_LOGIN_FAIL;
+	do_send(&p);
+}
+
 void Session::send_add_player_packet(Object& other, char c_visual)
 {
 	int c_id = other.GetId();

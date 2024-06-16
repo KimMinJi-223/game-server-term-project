@@ -25,6 +25,7 @@ public:
 	void do_recv();
 	void do_send(void* packet);
 	void send_login_info_packet(OBJECT_VISUAL visual);
+	void send_login_fail_packet();
 	void send_add_player_packet(Object& c_id, char c_visual);
 	void send_move_packet(Object& other, char dir);
 	void send_remove_player_packet(int c_id);

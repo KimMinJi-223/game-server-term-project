@@ -81,12 +81,23 @@ void NetworkManager::ProcessPacket(char* p)
 
 		loginOk = true;
 
+		HWND ipEdit = GetDlgItem(_hwnd, 6000);
+		HWND ipbutton = GetDlgItem(_hwnd, 7000);
+		DestroyWindow(ipEdit);
+		DestroyWindow(ipbutton);
+
 		HWND idList = GetDlgItem(_hwnd, 1000);
 		HWND idEdit = GetDlgItem(_hwnd, 2000);
 		HWND idbutton = GetDlgItem(_hwnd, 3000);
 		ShowWindow(idList, SW_SHOW);
 		ShowWindow(idEdit, SW_SHOW);
 		ShowWindow(idbutton, SW_SHOW);
+	}
+	break;
+	case SC_LOGIN_FAIL:
+	{
+		HWND ideEdit = GetDlgItem(_hwnd, 6000);
+		SetWindowText(ideEdit, TEXT("로그인 실패. 아이디를 다시 입력하세요."));
 	}
 	break;
 	case SC_ADD_OBJECT:

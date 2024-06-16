@@ -85,16 +85,21 @@ void Server::LoadCollision(const char* fileName)
 		exit(-1);
 	}
 
-	for (int y = 0; y < W_WIDTH; ++y)
+	for (int y = 0; y < 40; ++y)
 	{
 		std::wstring line;
 		ifs >> line;
 
-		for (int x = 0; x < W_HEIGHT; ++x)
+		for (int x = 0; x < 40; ++x)
 		{
-			_collision[y][x] = line[x] - L'0';
+			for (int i = 0; i < 50; ++i) {
+				for (int j = 0; j < 50; ++j) {
+					_collision[y + i*40][x + j * 40] = line[x] - L'0';
+				}
+			}
 		}
 	}
+
 	ifs.close();
 }
 
@@ -180,15 +185,26 @@ void Server::process_packet(int id, char* packet)
 {
 	switch (packet[2]) {
 	case CS_LOGIN: {
-		std::cout << "로그인\n";
+		//std::cout << "로그인\n";
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 		Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
+
+		for (auto player: objects) {
+			char* name = player->GetName();
+			if (strncmp(p->name, name, strlen(p->name) + 1) == 0) {
+				std::cout << "LOGIN FAIL : 이미 로그인\n";
+				loginPlayer->send_login_fail_packet();
+				return;
+			}
+			
+		}
 		objects[id]->SetName(p->name);
 		wchar_t sql[50];
 		std::wstring wStr = converter.from_bytes(p->name);
 		swprintf(sql, 50, L"EXEC select_user '%s'", wStr.c_str());
 		_dbQueue.add_exec(reinterpret_cast<Session*>(objects[id]), sql, EV_LOGIN);
-		
+
+
 		break;
 	}
 	case CS_MOVE: {
@@ -376,7 +392,18 @@ void Server::WorkerThread()
 			Session* player = reinterpret_cast<Session*>(objects[key]);
 			Pos pos = player->GetPosition();
 
-			int sectorId = (pos.x / SECTOR_SIZE) + ((pos.y / SECTOR_SIZE) * MULTIPLY_ROW);
+			while (true) {
+				if (can_go(pos.x, pos.y))
+					break;
+				pos.x = rand() % W_WIDTH;
+				pos.y = rand() % W_HEIGHT;
+
+			}
+
+			player->SetPosition(pos.x, pos.y);
+
+			//std::cout << pos.x << " " << pos.y << std::endl;
+ 			int sectorId = (pos.x / SECTOR_SIZE) + ((pos.y / SECTOR_SIZE) * MULTIPLY_ROW);
 			sectors[sectorId].AddPlayerList(key);
 
 			player->send_login_info_packet(VI_PLAYER);
@@ -501,7 +528,7 @@ void Server::WorkerThread()
 				break;
 			}
 
-			int x = 0;
+			int x = 3;
 			int y = 0;
 			AStar(x, y, key);
 
@@ -566,6 +593,7 @@ void Server::disconnect(int key)
 	Session* logoutPlayer = reinterpret_cast<Session*>(objects[key]);
 	std::unordered_set <int> playerList;
 	GetNearPlayersList(key, playerList);
+	logoutPlayer->SetName("\n");
 
 	for (auto& id : playerList) {		
 		Session* pl = reinterpret_cast<Session*>(objects[id]);
@@ -611,7 +639,7 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 	if (!can_go(x, y)) {
 		return;
 	}
-	std::cout << "CS_MOVE " << x << y << "\n";
+	//std::cout << "CS_MOVE " << x << y << "\n";
 	movePlayer->SetPosition(x, y);
 	movePlayer->SetDir(direction);
 
@@ -738,7 +766,7 @@ int Server::SetSectorId(Object& obj, int id, int x, int y)
 
 void Server::AStar(int& x, int& y, int id)
 {
-	//std::cout << "Astar\n";
+	std::cout << "Astar\n";
 
 	bool pathSuccess = false;
 	static int DIR_COUNT = 4;
@@ -752,13 +780,21 @@ void Server::AStar(int& x, int& y, int id)
 	if (target == -1) {
 		x = startPos.x;
 		y = startPos.y;
-		std::cout << "-1이다\n";
+		//std::cout << "-1이다\n";
 		return;
 	}
 	Pos destPos = objects[target]->GetPosition();
 
-	if (startPos == destPos) 
+	if (startPos == destPos) {
+		while (true) {
+			x = rand() % 2000;
+			y = rand() % 2000;
+			if (can_go(x, y))
+				break;
+		}
+		monster->SetPosition(x, y);
 		return;
+	}
 
 	// 최종 길을 저장
 	std::vector<Pos> path;

@@ -152,16 +152,21 @@ void DevScene::Init()
 	// 언리얼 방식
 	{
 		Sprite* sprite = GET_SINGLE(ResourceManager)->GetSprite(L"Stage01");
-		
-		// 액터는 씬에 배치할 수 있는 것이다. 
-		SpriteActor* background = new SpriteActor();
-		background->SetSprite(sprite);
-		background->SetLayer(LAYER_BACKGROUND);
-		
-		const VectorInt size = sprite->GetSize();
-		background->SetPos(Vector(size.x / 2, size.y / 2));
 
-		AddActor(background);
+		// 액터는 씬에 배치할 수 있는 것이다. 
+		for (int i = 0; i < 50; ++i) {
+			for (int j = 0; j < 50; ++j) {
+				SpriteActor* background = new SpriteActor();
+
+				background->SetSprite(sprite);
+				background->SetLayer(LAYER_BACKGROUND);
+
+				const VectorInt size = sprite->GetSize();
+				background->SetPos(Vector(size.x / 2 + (1200* i), size.y / 2 + (1200 * j)));
+
+				AddActor(background);
+			}
+		}
 	}
 
 	{
@@ -199,7 +204,7 @@ void DevScene::Init()
 			tm->SetTileSize(GTilesSize);
 
 			GET_SINGLE(ResourceManager)->LoadTilemap(L"Tilemap_01", L"Tilemap\\Tilemap_01.txt");
-			
+
 			_tilemapActor->SetTilemap(tm);
 			_tilemapActor->SetShowDebug(false);
 		}
@@ -216,7 +221,7 @@ void DevScene::Init()
 		Sound* sound = GET_SINGLE(ResourceManager)->GetSound(L"BGM");
 		sound->Play(true);
 	}
-	
+
 
 	Super::Init();
 }

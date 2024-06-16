@@ -33,7 +33,6 @@ void DB::do_db()
 		DB_EVENT ev;
 		if (_db_queue.try_pop(ev)) {
 			OVER_EXP* ov = new OVER_EXP;
-
 			switch (ev.event_type) {
 			case EV_LOGIN:
 				ov->_comp_type = OP_LOGIN;
@@ -43,21 +42,22 @@ void DB::do_db()
 			}
 		}
 
-		//std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
 
-void DB::add_exec(Session* player, SQLWCHAR* sql, EVENT_TYPE et)
+void DB::add_exec(Session* player, const wchar_t* sql, EVENT_TYPE et)
 {
 	DB_EVENT ev;
 	ev.player = player;
-	ev.sqlArr = sql;
+	wcsncpy_s(ev.sqlArr, sql, 100);
 	ev.event_type = et;
 	_db_queue.push(ev);
 }
 
-bool DB::ExecDirect(EXEC_TYPE exec, SQLWCHAR* sqlArr, Session* player)
+bool DB::ExecDirect(EXEC_TYPE exec, const wchar_t* sqlArr, Session* player)
 {
+
 	bool ret = false;
 
 	SQLRETURN retcode = SQLExecDirect(hstmt, (SQLWCHAR*)sqlArr, SQL_NTS);
@@ -71,9 +71,6 @@ bool DB::ExecDirect(EXEC_TYPE exec, SQLWCHAR* sqlArr, Session* player)
 		case EXEC_TYPE::LOGINT:
 		{
 			ret = send_login(sqlArr, player);
-			OVER_EXP* ov = new OVER_EXP;
-			ov->_comp_type = OP_LOGIN;
-			PostQueuedCompletionStatus(_hiocp, 1, player->GetId(), &ov->_over);
 		}
 			break;
 		case EXEC_TYPE::LOGOUT:
@@ -125,7 +122,7 @@ void DB::connect()
 	}
 }
 
-bool DB::send_login(SQLWCHAR* sqlArr, Session* player)
+bool DB::send_login(const wchar_t* sqlArr, Session* player)
 {
 	SQLRETURN retcode;
 
@@ -163,7 +160,7 @@ bool DB::send_login(SQLWCHAR* sqlArr, Session* player)
 			printf("유저가 없어 유저를 추가했습니다.\n");
 		}
 
-		printf("x : %3d, y : %3d, Lv : %3d, Exp : %3d, Hp : %3d, Power : %3d\n", x, y, lv, exp, hp, power);
+		//printf("x : %3d, y : %3d, Lv : %3d, Exp : %3d, Hp : %3d, Power : %3d\n", x, y, lv, exp, hp, power);
 
 		player->Login(x, y, hp, lv, exp, power);
 		return true;
