@@ -64,7 +64,7 @@ void Monster::Init(int id, int x, int y)
 
 void Monster::move(int& x, int& y)
 {
-	printf("move\n");
+	//printf("move\n");
 	// 단순 영역안에서 이동이면 서버에서 하자. 
 	// 맞았나, 타겟이 범위에 있나 확인은 루아에서하자
 	// 이 이동은 서버에서 다른거는 클라에서

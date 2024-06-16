@@ -1,8 +1,6 @@
 #include "Timer.h"
 #include <thread>
 #include "OVER_EXP.h"
-#include <thread>
-using namespace std::chrono_literals;
 
 void Timer::Init(HANDLE hiocp)
 {
@@ -27,7 +25,7 @@ void Timer::do_timer()
 		if (_timer_queue.try_pop(ev)) {
 			if (ev.wakeup_time > current_time) {
 				_timer_queue.push(ev);
-				std::this_thread::sleep_for(1ms);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}
 			OVER_EXP* ov = new OVER_EXP;
@@ -55,6 +53,6 @@ void Timer::do_timer()
 			continue;
 		}
 
-		std::this_thread::sleep_for(1ms);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }

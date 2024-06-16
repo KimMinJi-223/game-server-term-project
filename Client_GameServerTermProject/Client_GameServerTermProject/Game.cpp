@@ -21,7 +21,7 @@ Game::~Game()
 	
 	_CrtDumpMemoryLeaks();
 }
-void Game::Init(HWND hwnd, HINSTANCE hinst)
+void Game::Init(HWND hwnd, HINSTANCE hinst, const char* ip)
 {
 	_hwnd = hwnd;				// 윈도우 번호
 	_hdc = ::GetDC(hwnd);		// 우리가 그릴 도화지 번호
@@ -46,14 +46,13 @@ void Game::Init(HWND hwnd, HINSTANCE hinst)
 	// 초기 씬 설정
 	GET_SINGLE(SceneManager)->ChangeScene(SceneType::DevScene);
 
-	GET_SINGLE(NetworkManager)->Init(_hwnd);
+	GET_SINGLE(NetworkManager)->Init(_hwnd, ip);
 	GET_SINGLE(SceneManager)->GetCurrentScene()->GetPlayerController()->Init();
 }
 
 void Game::Update()
 {
-	// 통신 
-	GET_SINGLE(NetworkManager)->Update();
+	
 	// 현재 시간 계산
 	GET_SINGLE(TimeManager)->Update();
 	// 입력의 상태

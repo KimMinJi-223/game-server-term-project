@@ -6,7 +6,7 @@
 #include "Scene.h"
 #include "Actor.h"
 
-void NetworkManager::Init(HWND hwnd)
+void NetworkManager::Init(HWND hwnd, const char* ip)
 {
 	_hwnd = hwnd;
 	avatar = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->avatar;
@@ -23,7 +23,7 @@ void NetworkManager::Init(HWND hwnd)
 	addr_s.sin_family = AF_INET;
 	// 엔디안 맞춘다
 	addr_s.sin_port = htons(PORT_NUM);
-	inet_pton(AF_INET, "127.0.0.1", &addr_s.sin_addr);
+	inet_pton(AF_INET, ip, &addr_s.sin_addr);
 
 	while (true) {
 		if (connect(socket, reinterpret_cast<SOCKADDR*>(&addr_s), sizeof(addr_s)) == SOCKET_ERROR) {
@@ -34,12 +34,19 @@ void NetworkManager::Init(HWND hwnd)
 				break;
 		}
 	}
+	connectOk = true;
+
+	
+}
+
+void NetworkManager::SendLogin(const char* name)
+{
 	// CS_LOGIN 해야함
 	CS_LOGIN_PACKET p;
 	p.size = sizeof(p);
 	p.type = static_cast<char>(CS_LOGIN);
-	avatar->SetName("hello");
-	strcpy_s(p.name, "hello");
+	avatar->SetName(name);
+	strcpy_s(p.name, name);
 	::send(socket, reinterpret_cast<char*>(&p), sizeof(p), 0);
 }
 
@@ -71,6 +78,15 @@ void NetworkManager::ProcessPacket(char* p)
 		avatar->SetEXP(packet->exp);
 		avatar->SetLevel(packet->level);
 		avatar->SetCellPos(pos, true);
+
+		loginOk = true;
+
+		HWND idList = GetDlgItem(_hwnd, 1000);
+		HWND idEdit = GetDlgItem(_hwnd, 2000);
+		HWND idbutton = GetDlgItem(_hwnd, 3000);
+		ShowWindow(idList, SW_SHOW);
+		ShowWindow(idEdit, SW_SHOW);
+		ShowWindow(idbutton, SW_SHOW);
 	}
 	break;
 	case SC_ADD_OBJECT:

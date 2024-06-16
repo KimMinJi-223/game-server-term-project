@@ -3,14 +3,19 @@
 #include <vector>
 #include <thread>
 #include "Timer.h"
+#include "DB.h"
 
 int main()
 {
 	std::wcout.imbue(std::locale("korean"));
 	Server* server = Server::GetInstance();
 	server->Init();
+
 	Timer* timer = server->GetTImer();
 	std::thread timerThread{ [&timer]() {timer->do_timer(); } };
+
+	DB* db = server->GetDB();
+	std::thread dbThread{ [&db]() {db->do_db(); } };
 
 	std::vector<std::thread> worker_threads;
 	int num_threads = std::thread::hardware_concurrency();
@@ -19,5 +24,6 @@ int main()
 	for (auto& th : worker_threads)
 		th.join();
 	timerThread.join();
+	dbThread.join();
 	delete server;
 }

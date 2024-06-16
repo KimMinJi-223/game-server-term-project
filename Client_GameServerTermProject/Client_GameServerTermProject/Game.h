@@ -8,7 +8,7 @@ public:
 
 public:
 	// 초기화하는 함수
-	void Init(HWND hwnd, HINSTANCE hinst);
+	void Init(HWND hwnd, HINSTANCE hinst, const char* ip);
 	// 매 프레임마다 업데이트하는 함수
 	void Update();
 	// 그림 그리는 것을 처리하는 함수

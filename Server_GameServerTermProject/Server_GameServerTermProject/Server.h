@@ -8,6 +8,8 @@
 #include "OVER_EXP.h"
 #include "Sector.h"
 #include "Timer.h"
+#include "DB.h"
+
 #pragma comment(lib, "WS2_32.lib")
 #pragma comment(lib, "MSWSock.lib")
 
@@ -22,20 +24,26 @@ private:
 	Server() { }
 public:
 	static Server* GetInstance()
-{
-static Server s_instance;
-return &s_instance;	
-}
+	{
+		static Server s_instance;
+		return &s_instance;
+	}
 
 private:
 	SOCKET _listen_socket;
 	SOCKET _client_socket;
 	OVER_EXP _accept_over;
+
 	HANDLE _hiocp;
+
 	std::array<Object*, MAX_USER + NUM_NPC> objects;
 	std::array<Sector, SECTOR_COUNT> sectors;
-	Timer _timerQueue; 
+
+	Timer _timerQueue;
+	DB _dbQueue;
+
 	std::vector<std::vector<int>> _collision;
+
 public:
 	void Init();
 	void initialize_npc();
@@ -60,7 +68,8 @@ public:
 	bool can_see(int a, int b);
 	bool can_go(int x, int y);
 	Timer* GetTImer() { return &_timerQueue; }
-	
+	DB* GetDB() { return &_dbQueue; }
+
 public:
 	static int API_GetPosX(lua_State* L);
 	static int API_GetPosY(lua_State* L);

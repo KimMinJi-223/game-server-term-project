@@ -12,8 +12,12 @@ public:
 	int myId;
 	Player* avatar;
 	HWND _hwnd;
+	bool connectOk = false;
+	bool loginOk = false;
+
 public:
-	void Init(HWND hwnd);
+	void Init(HWND hwnd, const char* ip);
+	void SendLogin(const char* name);
 	void Update();
 
 	void ProcessPacket(char* p);

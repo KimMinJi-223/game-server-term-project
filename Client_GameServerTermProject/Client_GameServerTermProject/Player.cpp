@@ -76,6 +76,7 @@ void Player::Render(HDC hdc)
 {
 	Super::Render(hdc);
 
+	if (GET_SINGLE(NetworkManager)->GetInstance()->myId == _id) {
 	::Rectangle(hdc, 50, 0, 150, 15);
 
 	HBRUSH hBrushRed = CreateSolidBrush(RGB(255, 0, 0));
@@ -84,7 +85,6 @@ void Player::Render(HDC hdc)
 	SelectObject(hdc, hOldBrush);
 	DeleteObject(hBrushRed);
 
-	if (GET_SINGLE(NetworkManager)->GetInstance()->myId == _id) {
 		// exp
 		std::wstring str = std::format(L"EXP : {0}", _exp);
 		::TextOut(hdc, 50, 15, str.c_str(), static_cast<int32>(str.size()));

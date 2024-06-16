@@ -12,6 +12,9 @@
 #define MAX_LOADSTRING 100
 
 // 전역 변수:
+bool idInput = false;
+
+Game game;
 HINSTANCE hInst;                                // 현재 인스턴스입니다.
 HWND g_hWnd;
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
@@ -24,58 +27,55 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPWSTR    lpCmdLine,
+	_In_ int       nCmdShow)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+	UNREFERENCED_PARAMETER(hPrevInstance);
+	UNREFERENCED_PARAMETER(lpCmdLine);
 
 	std::wcout.imbue(std::locale("korean"));
 
-    // TODO: 여기에 코드를 입력합니다.
 
-    // 전역 문자열을 초기화합니다.
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_CLIENTGAMESERVERTERMPROJECT, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
+	// TODO: 여기에 코드를 입력합니다.
 
-    // 애플리케이션 초기화를 수행합니다:
-    if (!InitInstance(hInstance, nCmdShow))
-    {
-        return FALSE;
-    }
+	// 전역 문자열을 초기화합니다.
+	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+	LoadStringW(hInstance, IDC_CLIENTGAMESERVERTERMPROJECT, szWindowClass, MAX_LOADSTRING);
+	MyRegisterClass(hInstance);
 
-    Game game;
-    game.Init(g_hWnd, hInst);
+	// 애플리케이션 초기화를 수행합니다:
+	if (!InitInstance(hInstance, nCmdShow))
+	{
+		return FALSE;
+	}
 
-    MSG msg = {};
-    uint64 prevTick = 0;
+	MSG msg = {};
+	uint64 prevTick = 0;
+	
 
-    // 기본 메시지 루프입니다:
-    while (msg.message != WM_QUIT)
-    {
-        if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-        {
-            ::TranslateMessage(&msg);
-            ::DispatchMessage(&msg);
-        }
-        else
-        {
-            uint64 now = ::GetTickCount64();
+	// 기본 메시지 루프입니다:
+	while (msg.message != WM_QUIT)
+	{
+		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			::TranslateMessage(&msg);
+			::DispatchMessage(&msg);
+		}
+		else
+		{
+			if (GET_SINGLE(NetworkManager)->GetInstance()->connectOk) {
+				GET_SINGLE(NetworkManager)->Update();
 
-            //if (now - prevTick >= 30)
-            {
-                // 게임 로직
+				if (GET_SINGLE(NetworkManager)->loginOk == true) {
+					game.Update();
+					game.Render();
+				}
+			}
+		}
+	}
 
-                game.Update();
-                game.Render();
-                prevTick = now;
-            }
-        }
-    }
-
-    return (int)msg.wParam;
+	return (int)msg.wParam;
 }
 
 
@@ -87,24 +87,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
-    WNDCLASSEXW wcex;
+	WNDCLASSEXW wcex;
 
-    wcex.cbSize = sizeof(WNDCLASSEX);
+	wcex.cbSize = sizeof(WNDCLASSEX);
 
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CLIENTGAMESERVERTERMPROJECT));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_CLIENTGAMESERVERTERMPROJECT);
-    wcex.lpszMenuName = nullptr;
-    wcex.lpszClassName  = szWindowClass;
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+	wcex.style = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CLIENTGAMESERVERTERMPROJECT));
+	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_CLIENTGAMESERVERTERMPROJECT);
+	wcex.lpszMenuName = nullptr;
+	wcex.lpszClassName = szWindowClass;
+	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
-    return RegisterClassExW(&wcex);
+	return RegisterClassExW(&wcex);
 }
 
 //
@@ -119,25 +119,25 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
+	hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
-   RECT windowRect = { 0, 0, GWinSizeX, GWinSizeY };
-   ::AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, false);
+	RECT windowRect = { 0, 0, GWinSizeX, GWinSizeY };
+	::AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, false);
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-       CW_USEDEFAULT, 0, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, nullptr, nullptr, hInstance, nullptr);
+	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, 0, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, nullptr, nullptr, hInstance, nullptr);
 
-   g_hWnd = hWnd;
+	g_hWnd = hWnd;
 
-   if (!hWnd)
-   {
-      return FALSE;
-   }
+	if (!hWnd)
+	{
+		return FALSE;
+	}
 
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
 
-   return TRUE;
+	return TRUE;
 }
 
 //
@@ -157,17 +157,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	switch (message)
 	{
-	case WM_CREATE:
-		CreateWindow(TEXT("LISTBOX"), TEXT("LISTBOX"),
+	case WM_CREATE: {
+		HWND listBox = CreateWindow(TEXT("LISTBOX"), TEXT("LISTBOX"),
 			WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL, 0, 400, 300, 180, hWnd, (HMENU)1000,
 			hInst, NULL);
-		CreateWindow(TEXT("EDIT"), TEXT(""),
+		HWND edit = CreateWindow(TEXT("EDIT"), TEXT(""),
 			WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL, 0, 580, 200, 20, hWnd, (HMENU)2000,
 			hInst, NULL);
-		CreateWindow(TEXT("BUTTON"), TEXT("BUTTON"),
+		HWND button = CreateWindow(TEXT("BUTTON"), TEXT("BUTTON"),
 			WS_CHILD | WS_VISIBLE | WS_BORDER, 200, 580, 100, 20, hWnd, (HMENU)3000,
 			hInst, NULL);
-		break;
+
+		ShowWindow(listBox, SW_HIDE);
+		ShowWindow(edit, SW_HIDE);
+		ShowWindow(button, SW_HIDE);
+
+		CreateWindow(TEXT("EDIT"), TEXT("127.0.0.1"),
+			WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL, 0, 0, 200, 20, hWnd, (HMENU)4000,
+			hInst, NULL);
+		CreateWindow(TEXT("BUTTON"), TEXT("<- 서버 IP 입력"),
+			WS_CHILD | WS_VISIBLE | WS_BORDER, 200, 0, 110, 20, hWnd, (HMENU)5000,
+			hInst, NULL);
+		HWND idEdit = CreateWindow(TEXT("EDIT"), TEXT(""),
+			WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL, 0, 40, 200, 20, hWnd, (HMENU)6000,
+			hInst, NULL);
+		HWND idButton = CreateWindow(TEXT("BUTTON"), TEXT("<- ID입력"),
+			WS_CHILD | WS_VISIBLE | WS_BORDER, 200, 40, 110, 20, hWnd, (HMENU)7000,
+			hInst, NULL);
+
+		ShowWindow(idEdit, SW_HIDE);
+		ShowWindow(idButton, SW_HIDE);
+	}
+				  break;
 	case WM_COMMAND:
 	{
 		int wmId = LOWORD(wParam);
@@ -187,7 +208,43 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			GET_SINGLE(NetworkManager)->GetInstance()->SendChat(multiText);
 		}
 		break;
+		case 4000:
+		{
+		}
+		break;
+		case 5000:
+		{
+			GetDlgItemText(hWnd, 4000, word, CHAT_SIZE / 2);
+			if (word[0] == '\0')
+				break;
 
+
+			WideCharToMultiByte(CP_ACP, 0, word, -1, multiText, sizeof(multiText), NULL, NULL);
+			game.Init(g_hWnd, hInst, multiText);
+
+			HWND ipEdit = GetDlgItem(hWnd, 4000);
+			HWND ipbutton = GetDlgItem(hWnd, 5000);
+			DestroyWindow(ipEdit);
+			DestroyWindow(ipbutton);
+
+			HWND ideEdit= GetDlgItem(hWnd, 6000);
+			HWND idbutton = GetDlgItem(hWnd, 7000);
+			ShowWindow(ideEdit, SW_SHOW);
+			ShowWindow(idbutton, SW_SHOW);
+
+			//GET_SINGLE(NetworkManager)->GetInstance()->SendChat(multiText);
+		}
+		break;
+		case 7000:
+		{
+			GetDlgItemText(hWnd, 6000, word, CHAT_SIZE / 2);
+			if (word[0] == '\0')
+				break;
+			WideCharToMultiByte(CP_ACP, 0, word, -1, multiText, sizeof(multiText), NULL, NULL);
+
+			GET_SINGLE(NetworkManager)->GetInstance()->SendLogin(multiText);
+		}
+		break;
 		case IDM_EXIT:
 			DestroyWindow(hWnd);
 			break;

@@ -13,7 +13,6 @@ struct TIMER_EVENT {
 	{
 		return wakeup_time > e.wakeup_time;
 	}
-
 };
 
 class Timer

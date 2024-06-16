@@ -19,7 +19,7 @@ private:
 
 public:
 	void Init(int x, int y, int id, const char* name, SOCKET socket);
-	void Login(int x, int y, const char* name, int hp, int level, int exp);
+	void Login(int x, int y, int hp, int level, int exp, int power);
 public:
 	// 네트워크
 	void do_recv();
@@ -36,5 +36,6 @@ public:
 	void GetRefViewList(std::unordered_set<int>& view);
 	OVER_EXP* GetOverEXP() { return &_recv_over; }
 	SOCKET GetSocket() { return _socket; }
+	void SetName(const char* name) { strcpy_s(_name, NAME_SIZE, name); }
 };
 

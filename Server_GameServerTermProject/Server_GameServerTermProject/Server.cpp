@@ -9,6 +9,8 @@
 #include <fstream>
 #include <map>
 #include <queue>
+#include <codecvt>
+std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 
 void Server::Init()
 {
@@ -40,6 +42,8 @@ void Server::Init()
 	AcceptEx(_listen_socket, _client_socket, _accept_over._buff.GetBuff(), 0, addr_size + 16, addr_size + 16, 0, &_accept_over._over);
 	
 	_timerQueue.Init(_hiocp);
+	_dbQueue.Init(_hiocp);
+
 	std::cout << "서버 부팅 완료" << std::endl;
 }
 
@@ -176,86 +180,21 @@ void Server::process_packet(int id, char* packet)
 {
 	switch (packet[2]) {
 	case CS_LOGIN: {
+		std::cout << "로그인\n";
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 		Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
+		objects[id]->SetName(p->name);
+		wchar_t sql[50];
+		std::wstring wStr = converter.from_bytes(p->name);
+		swprintf(sql, 50, L"EXEC select_user '%s'", wStr.c_str());
+		_dbQueue.add_exec(reinterpret_cast<Session*>(objects[id]), sql, EV_LOGIN);
 		
-		Pos pos;
-		while (true) {
-			pos.x = rand() % W_WIDTH;
-			pos.y = rand() % W_HEIGHT;
-			if (can_go(pos.x, pos.y))
-				break;
-		}
-		loginPlayer->Login(pos.x, pos.y, p->name, 10, 1, 0);
-	
-		Pos playerPos = loginPlayer->GetPosition();
-		int sectorId = (playerPos.x / SECTOR_SIZE) + ((playerPos.y / SECTOR_SIZE) * MULTIPLY_ROW);
-		sectors[sectorId].AddPlayerList(id);
-
-		loginPlayer->send_login_info_packet(VI_PLAYER);
-
-		{
-			std::lock_guard<std::mutex> ll{ loginPlayer->GetStateMutex() };
-			loginPlayer->SetState(ST_INGAME);
-		}
-
-		std::unordered_set<int> playerList;
-		int adj_index = 0;
-
-		for (int i = 0; i < ADJ_COUNT; ++i) {
-			adj_index = sectorId - adj_sector[i];
-			if (adj_index < 0 || adj_index > SECTOR_COUNT - 1)
-				continue;
-
-			 sectors[adj_index].GetPlayerList(playerList);
-
-			for (auto& pl_id : playerList) {
-				Object& cl = *(objects[pl_id]);
-				{
-					std::lock_guard<std::mutex> ll(cl.GetStateMutex());
-					if (ST_INGAME != cl.GetState()) continue;
-				}
-				if (pl_id == id) 
-					continue;
-				if (true == can_see(pl_id, id)) {				
-					if (true == cl.GetIsNpc()) {
-						OVER_EXP* exover = new OVER_EXP;
-						Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
-
-						if (monster->GetIsAgro()) {
-							if (!monster->GetISAIMove()) {
-								exover->_comp_type = OP_AI_LUA; // 이거는 어그로와 공격 그쪽으로 변경
-								exover->_cause_player_id = id;
-								PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
-							}
-						}
-
-						loginPlayer->send_add_player_packet(cl, monster->GetMonsterType());
-
-						if (false == monster->GetIsActive()) {
-							if (true == monster->CASIsActive(false, true)) {
-								// 타이머가 호출되고 로밍 몬스터의 경우 영역에서 움직이는거를 루아가 계산한다. 
-								if(monster->GetIsRoaming())
-									_timerQueue.add_timer(pl_id, -1, EV_RANDOM_MOVE, 1000);
-							}
-							continue;
-						}
-						else {
-							loginPlayer->send_add_player_packet(cl, monster->GetMonsterType());
-						}
-					}
-					else {
-						loginPlayer->send_add_player_packet(cl, VI_PLAYER);
-						reinterpret_cast<Session*>(&cl)->send_add_player_packet(*loginPlayer, VI_PLAYER);
-					}
-				}
-			}
-		}
 		break;
 	}
 	case CS_MOVE: {
 		//std::cout << "CS_MOVE" << std::endl;
 		
+
 		CS_MOVE_PACKET* p = reinterpret_cast<CS_MOVE_PACKET*>(packet);
 		Session* movePlayer = reinterpret_cast<Session*>(objects[id]);
 		movePlayer->_last_move_time = p->move_time;
@@ -264,7 +203,7 @@ void Server::process_packet(int id, char* packet)
 	}
 	case CS_CHAT: {
 		CS_CHAT_PACKET* p = reinterpret_cast<CS_CHAT_PACKET*>(packet);
-		std::cout << p->mess;
+		//std::cout << p->mess;
 		BroadCastChat(id, p->mess);
 		break;
 	}
@@ -376,7 +315,7 @@ void Server::WorkerThread()
 		switch (ex_over->_comp_type) {
 		case OP_ACCEPT: {
 			int client_id = get_new_client_id();
-			std::cout << "아이디 할당 : " << client_id << std::endl;
+			//std::cout << "아이디 할당 : " << client_id << std::endl;
 			if (client_id != -1) {
 				{
 					std::lock_guard<std::mutex> ll(objects[client_id]->GetStateMutex());
@@ -432,6 +371,77 @@ void Server::WorkerThread()
 		case OP_SEND:
 			delete ex_over;
 			break;
+		case OP_LOGIN:
+		{
+			Session* player = reinterpret_cast<Session*>(objects[key]);
+			Pos pos = player->GetPosition();
+
+			int sectorId = (pos.x / SECTOR_SIZE) + ((pos.y / SECTOR_SIZE) * MULTIPLY_ROW);
+			sectors[sectorId].AddPlayerList(key);
+
+			player->send_login_info_packet(VI_PLAYER);
+
+			{
+				std::lock_guard<std::mutex> ll{ player->GetStateMutex() };
+				player->SetState(ST_INGAME);
+			}
+
+			std::unordered_set<int> playerList;
+			int adj_index = 0;
+
+			for (int i = 0; i < ADJ_COUNT; ++i) {
+				adj_index = sectorId - adj_sector[i];
+				if (adj_index < 0 || adj_index > SECTOR_COUNT - 1)
+					continue;
+
+				sectors[adj_index].GetPlayerList(playerList);
+
+				for (auto& pl_id : playerList) {
+					Object& cl = *(objects[pl_id]);
+					{
+						std::lock_guard<std::mutex> ll(cl.GetStateMutex());
+						if (ST_INGAME != cl.GetState()) continue;
+					}
+					if (pl_id == key)
+						continue;
+					if (true == can_see(pl_id, key)) {
+						if (true == cl.GetIsNpc()) {
+							OVER_EXP* exover = new OVER_EXP;
+							Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
+
+							if (monster->GetIsAgro()) {
+								if (!monster->GetISAIMove()) {
+									exover->_comp_type = OP_AI_LUA; // 이거는 어그로와 공격 그쪽으로 변경
+									exover->_cause_player_id = key;
+									PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
+								}
+							}
+
+							player->send_add_player_packet(cl, monster->GetMonsterType());
+
+							if (false == monster->GetIsActive()) {
+								if (true == monster->CASIsActive(false, true)) {
+									// 타이머가 호출되고 로밍 몬스터의 경우 영역에서 움직이는거를 루아가 계산한다. 
+									if (monster->GetIsRoaming())
+										_timerQueue.add_timer(pl_id, -1, EV_RANDOM_MOVE, 1000);
+								}
+								continue;
+							}
+							else {
+								player->send_add_player_packet(cl, monster->GetMonsterType());
+							}
+						}
+						else {
+							player->send_add_player_packet(cl, VI_PLAYER);
+							reinterpret_cast<Session*>(&cl)->send_add_player_packet(*player, VI_PLAYER);
+						}
+					}
+				}
+			}
+
+		}
+		delete ex_over;
+		break;
 		case OP_NPC_MOVE: {
 			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
 			delete ex_over;
@@ -550,6 +560,9 @@ void Server::WorkerThread()
 
 void Server::disconnect(int key)
 {
+	int sectorId = objects[key]->GetSectorId();
+	sectors[sectorId].RemovePlayerList(key);
+
 	Session* logoutPlayer = reinterpret_cast<Session*>(objects[key]);
 	std::unordered_set <int> playerList;
 	GetNearPlayersList(key, playerList);
@@ -598,9 +611,11 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 	if (!can_go(x, y)) {
 		return;
 	}
+	std::cout << "CS_MOVE " << x << y << "\n";
 	movePlayer->SetPosition(x, y);
 	movePlayer->SetDir(direction);
 
+	sectors;
 	int sectorId = SetSectorId(*movePlayer, id, x, y);
 
 	std::unordered_set<int> old_vl;
@@ -723,7 +738,7 @@ int Server::SetSectorId(Object& obj, int id, int x, int y)
 
 void Server::AStar(int& x, int& y, int id)
 {
-	std::cout << "Astar\n";
+	//std::cout << "Astar\n";
 
 	bool pathSuccess = false;
 	static int DIR_COUNT = 4;
@@ -817,7 +832,7 @@ void Server::AStar(int& x, int& y, int id)
 		x = startPos.x;
 		y = startPos.y;
 		//Server::GetInstance()->GetTImer()->add_timer(id, EV_RANDOM_MOVE, 1000);
-		std::cout << "길 못 찾음..\n";
+		//std::cout << "길 못 찾음..\n";
 		return;
 	}
 	Pos pos = destPos;

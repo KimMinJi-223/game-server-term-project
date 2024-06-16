@@ -6,17 +6,17 @@ void Session::Init(int x, int y, int id, const char* name, SOCKET socket)
 	_socket = socket;
 }
 
-void Session::Login(int x, int y, const char* name, int hp, int level, int exp)
+void Session::Login(int x, int y, int hp, int level, int exp, int power)
 {
 	_pos.x = x;
 	_pos.y = y;
-	strcpy_s(_name, NAME_SIZE, name);
 	_hp = hp;
 	_maxHp = DEFALUT_MAX_HP * level;
 	_level = level;
 	_exp = exp;
 	_power = 100;
 	_maxExp = DEFALUT_EXP * pow(2, _level - 1);
+	_power = power;
 }
 
 void Session::do_recv()
