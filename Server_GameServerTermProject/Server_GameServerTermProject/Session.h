@@ -35,5 +35,6 @@ public:
 public:
 	void GetRefViewList(std::unordered_set<int>& view);
 	OVER_EXP* GetOverEXP() { return &_recv_over; }
+	SOCKET GetSocket() { return _socket; }
 };
 

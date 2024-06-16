@@ -178,7 +178,15 @@ void Server::process_packet(int id, char* packet)
 	case CS_LOGIN: {
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 		Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
-		loginPlayer->Login(54, 11, p->name, 10, 1, 0);
+		
+		Pos pos;
+		while (true) {
+			pos.x = rand() % W_WIDTH;
+			pos.y = rand() % W_HEIGHT;
+			if (can_go(pos.x, pos.y))
+				break;
+		}
+		loginPlayer->Login(pos.x, pos.y, p->name, 10, 1, 0);
 	
 		Pos playerPos = loginPlayer->GetPosition();
 		int sectorId = (playerPos.x / SECTOR_SIZE) + ((playerPos.y / SECTOR_SIZE) * MULTIPLY_ROW);
@@ -247,9 +255,10 @@ void Server::process_packet(int id, char* packet)
 	}
 	case CS_MOVE: {
 		//std::cout << "CS_MOVE" << std::endl;
-
+		
 		CS_MOVE_PACKET* p = reinterpret_cast<CS_MOVE_PACKET*>(packet);
 		Session* movePlayer = reinterpret_cast<Session*>(objects[id]);
+		movePlayer->_last_move_time = p->move_time;
 		process_move(movePlayer, id, p->direction);
 		break;
 	}
@@ -541,7 +550,23 @@ void Server::WorkerThread()
 
 void Server::disconnect(int key)
 {
+	Session* logoutPlayer = reinterpret_cast<Session*>(objects[key]);
+	std::unordered_set <int> playerList;
+	GetNearPlayersList(key, playerList);
 
+	for (auto& id : playerList) {		
+		Session* pl = reinterpret_cast<Session*>(objects[id]);
+		{
+			std::lock_guard<std::mutex> ll(pl->GetStateMutex());
+			if (ST_INGAME != pl->GetState()) continue;
+		}
+		if (pl->GetId() == key) continue;
+		pl->send_remove_player_packet(key);
+	}
+	closesocket(logoutPlayer->GetSocket());
+
+	std::lock_guard<std::mutex> ll(objects[key]->GetStateMutex());
+	objects[key]->SetState(ST_FREE);
 }
 
 void Server::BroadCastChat(int id, char* p)

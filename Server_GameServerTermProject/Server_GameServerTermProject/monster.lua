@@ -58,7 +58,8 @@ function IsAStar(playerId, x, y)
     end
     	
 
-    --타겟이라면?
+    --타겟이라면? 
+    --로그인 상태도 확인해야함
     if(playerId == target) then 
 
         my_x = API_GetPosX(myid);
