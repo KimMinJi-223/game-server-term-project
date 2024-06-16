@@ -393,8 +393,9 @@ void Server::WorkerThread()
 			Pos pos = player->GetPosition();
 
 			while (true) {
-				if (can_go(pos.x, pos.y))
+				if (can_go(pos.x, pos.y)) {
 					break;
+				}
 				pos.x = rand() % W_WIDTH;
 				pos.y = rand() % W_HEIGHT;
 
@@ -433,11 +434,11 @@ void Server::WorkerThread()
 						continue;
 					if (true == can_see(pl_id, key)) {
 						if (true == cl.GetIsNpc()) {
-							OVER_EXP* exover = new OVER_EXP;
 							Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
 
 							if (monster->GetIsAgro()) {
 								if (!monster->GetISAIMove()) {
+									OVER_EXP* exover = new OVER_EXP;
 									exover->_comp_type = OP_AI_LUA; // 이거는 어그로와 공격 그쪽으로 변경
 									exover->_cause_player_id = key;
 									PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
@@ -580,6 +581,7 @@ void Server::WorkerThread()
 				Session* player = reinterpret_cast<Session*>(objects[playerId]);
 				player->send_add_player_packet(*objects[key], monster->GetMonsterType());
 			}
+			delete ex_over;
 			break;
 		}
 	}
@@ -668,12 +670,12 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 			if (true == can_see(pl_id, id)) {
 				new_vl.insert(pl_id);
 				if ((true == cl.GetIsNpc())) {
-					OVER_EXP* exover = new OVER_EXP;
 					Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
 
 					// 어그로 몬스터의 레이더 검사
 					if (monster->GetIsAgro()) {
 						if (!monster->GetISAIMove()) {
+							OVER_EXP* exover = new OVER_EXP;
 							exover->_comp_type = OP_AI_LUA;
 							exover->_cause_player_id = id;
 							PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
