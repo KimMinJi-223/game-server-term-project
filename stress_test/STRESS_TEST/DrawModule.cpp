@@ -136,6 +136,12 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 															// Pulsing Colors Based On Text Position
 	glColor3f(1, 1, 0);
 	// Position The Text On The Screen
+
+	if (IP[0] == '\0') {
+		glRasterPos2f(-0.5f, 0.5f);
+		glPrint("Enter the IP in the console");
+	}
+
 	glRasterPos2f(0.0f, 0.00f);
 	glPrint("STRESS TEST [%d]", (int)active_clients);	// Print GL Text To The Screen
 	glRasterPos2f(0.0f, 0.05f);

@@ -447,11 +447,11 @@ void Server::WorkerThread()
 			Pos pos = player->GetPosition();
 
 			while (true) {
-				pos.x = rand() % W_WIDTH;
-				pos.y = rand() % W_HEIGHT;
 				if (can_go(pos.x, pos.y)) {
 					break;
 				}
+				pos.x = rand() % W_WIDTH;
+				pos.y = rand() % W_HEIGHT;
 
 			}
 
@@ -640,8 +640,8 @@ void Server::WorkerThread()
 					//player->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
 					while (true) {
 						Pos pos;
-						pos.x = rand() % W_WIDTH / 40;
-						pos.y = rand() % W_HEIGHT / 40;
+						pos.x = rand() % W_WIDTH;
+						pos.y = rand() % W_HEIGHT;
 						if (can_go(pos.x, pos.y)) {
 							player->SetExp(player->GetExp() / 2);
 							player->send_exp_change_packet();

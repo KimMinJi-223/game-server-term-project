@@ -61,6 +61,7 @@ array<CLIENT, MAX_CLIENTS> g_clients;
 atomic_int num_connections;
 atomic_int client_to_close;
 atomic_int active_clients;
+char IP[65];
 
 int			global_delay;				// ms단위, 1000이 넘으면 클라이언트 증가 종료
 
@@ -254,7 +255,7 @@ constexpr int DELAY_LIMIT = 100;
 constexpr int DELAY_LIMIT2 = 150;
 constexpr int ACCEPT_DELY = 50;
 
-void Adjust_Number_Of_Client()
+void Adjust_Number_Of_Client(const char* IP)
 {
 	static int delay_multiplier = 1;
 	static int max_limit = MAXINT;
@@ -294,7 +295,7 @@ void Adjust_Number_Of_Client()
 	ZeroMemory(&ServerAddr, sizeof(SOCKADDR_IN));
 	ServerAddr.sin_family = AF_INET;
 	ServerAddr.sin_port = htons(PORT_NUM);
-	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	ServerAddr.sin_addr.s_addr = inet_addr(IP);
 
 
 	int Result = WSAConnect(g_clients[num_connections].client_socket, (sockaddr*)&ServerAddr, sizeof(ServerAddr), NULL, NULL, NULL, NULL);
@@ -339,9 +340,12 @@ fail_to_connect:
 
 void Test_Thread()
 {
+	IP[0] = '\0';
+	cin >> IP;
+
 	while (true) {
 		//Sleep(max(20, global_delay));
-		Adjust_Number_Of_Client();
+		Adjust_Number_Of_Client(IP);
 
 		for (int i = 0; i < num_connections; ++i) {
 			if (false == g_clients[i].connected) continue;
