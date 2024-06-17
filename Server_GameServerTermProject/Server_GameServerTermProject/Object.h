@@ -25,7 +25,7 @@ protected:
 
 public:
 	// 스트레스 테스트
-	int		_last_move_time;
+	int		_last_move_time_stress_test;
 
 public:
 	void Init(int x, int y, int id, const char* name);

@@ -1,6 +1,9 @@
 #pragma once
 #include "protocol.h"
 
+constexpr int ATTACK_RATE = 0;
+constexpr int MOVE_RATE = 100;
+
 enum S_STATE { 
 	ST_FREE, ST_ALLOC, ST_INGAME 
 };
@@ -13,7 +16,7 @@ enum EXEC_TYPE {
 };
 enum EVENT_TYPE { 
 	EV_RANDOM_MOVE, EV_AI_MOVE, EV_AI_LUA, EV_CHASE, EV_HEAL, EV_ATTACK, EV_RESPAWN,
-	EV_LOGIN
+	EV_LOGIN, EV_LOGOUT
 };
 enum MONSTER_MOVE_STATE {
 	MT_STOP, MT_RAND, MT_AI

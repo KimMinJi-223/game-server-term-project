@@ -39,6 +39,9 @@ void DB::do_db()
 				ExecDirect(LOGINT, ev.sqlArr, ev.player);
 				PostQueuedCompletionStatus(_hiocp, 1, ev.player->GetId(), &ov->_over);
 				break;
+			case EV_LOGOUT:
+				ExecDirect(LOGOUT, ev.sqlArr, ev.player);
+				break;
 			}
 		}
 
@@ -169,4 +172,7 @@ bool DB::send_login(const wchar_t* sqlArr, Session* player)
 		wprintf(L"User not found.\n");
 		return false;
 	}
-} 
+}
+void DB::send_logout(const wchar_t* sqlArr, Session* player)
+{
+}

@@ -209,11 +209,15 @@ void Server::process_packet(int id, char* packet)
 	}
 	case CS_MOVE: {
 		//std::cout << "CS_MOVE" << std::endl;
-		
-
 		CS_MOVE_PACKET* p = reinterpret_cast<CS_MOVE_PACKET*>(packet);
+
 		Session* movePlayer = reinterpret_cast<Session*>(objects[id]);
-		movePlayer->_last_move_time = p->move_time;
+		if (std::chrono::system_clock::now() < movePlayer->_last_move_time + std::chrono::milliseconds(MOVE_RATE))
+			break;
+		
+		movePlayer->_last_move_time = std::chrono::system_clock::now();
+
+		movePlayer->_last_move_time_stress_test = p->move_time;
 		process_move(movePlayer, id, p->direction);
 		break;
 	}
@@ -224,6 +228,12 @@ void Server::process_packet(int id, char* packet)
 		break;
 	}
 	case CS_ATTACK: {
+		Session* movePlayer = reinterpret_cast<Session*>(objects[id]);
+		if (std::chrono::system_clock::now() < movePlayer->_last_attak_time + std::chrono::milliseconds(ATTACK_RATE))
+			break;
+
+		movePlayer->_last_attak_time = std::chrono::system_clock::now();
+
 		int AttackedId = FindAttackedMonster(id);
 		if (AttackedId == -1)
 			break;
@@ -589,12 +599,22 @@ void Server::WorkerThread()
 
 void Server::disconnect(int key)
 {
-	int sectorId = objects[key]->GetSectorId();
+	Session* logoutPlayer = reinterpret_cast<Session*>(objects[key]);
+
+	int sectorId = logoutPlayer->GetSectorId();
 	sectors[sectorId].RemovePlayerList(key);
 
-	Session* logoutPlayer = reinterpret_cast<Session*>(objects[key]);
 	std::unordered_set <int> playerList;
 	GetNearPlayersList(key, playerList);
+
+	wchar_t sql[70];
+	std::wstring wStr = converter.from_bytes(logoutPlayer->GetName());
+	Pos pos = logoutPlayer->GetPosition();
+
+	swprintf(sql, 50, L"EXEC logout_user '%s', %d, %d, %d, %d, %d, %d", 
+		wStr.c_str(), pos.x, pos.y, 
+		logoutPlayer->GetLevel(), logoutPlayer->GetExp(), logoutPlayer->GetHp(), logoutPlayer->GetPower());
+	_dbQueue.add_exec(logoutPlayer, sql, EV_LOGOUT);
 	logoutPlayer->SetName("\n");
 
 	for (auto& id : playerList) {		

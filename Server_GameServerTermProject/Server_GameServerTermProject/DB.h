@@ -38,7 +38,7 @@ public:
 	bool ExecDirect(EXEC_TYPE exec, const wchar_t* sqlArr, Session* player);
 	void connect();
 	bool send_login(const wchar_t* sqlArr, Session* player);
-	//void send_logout();
+	void send_logout(const wchar_t* sqlArr, Session* player);
 	//void send_update();
 };
 

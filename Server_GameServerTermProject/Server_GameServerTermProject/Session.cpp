@@ -4,6 +4,8 @@ void Session::Init(int x, int y, int id, const char* name, SOCKET socket)
 {
 	Object::Init(x, y, id, name);
 	_socket = socket;
+	_last_attak_time = std::chrono::system_clock::now();
+	_last_attak_time = _last_attak_time;
 }
 
 void Session::Login(int x, int y, int hp, int level, int exp, int power)
@@ -105,7 +107,7 @@ void Session::send_move_packet(Object& other, char dir)
 	p.x = pos.x;
 	p.y = pos.y;
 	//p.direction = dir;
-	p.move_time = static_cast<Session*>(&other)->_last_move_time;
+	p.move_time = static_cast<Session*>(&other)->_last_move_time_stress_test;
 
 	do_send(&p);
 }

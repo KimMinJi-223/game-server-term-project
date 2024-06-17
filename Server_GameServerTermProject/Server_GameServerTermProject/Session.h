@@ -18,6 +18,10 @@ private:
 	std::mutex	_vll;
 
 public:
+	std::chrono::system_clock::time_point _last_attak_time;
+	std::chrono::system_clock::time_point _last_move_time;
+
+public:
 	void Init(int x, int y, int id, const char* name, SOCKET socket);
 	void Login(int x, int y, int hp, int level, int exp, int power);
 public:
