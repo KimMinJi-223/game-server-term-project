@@ -210,10 +210,10 @@ void DevScene::Init()
 		}
 	}
 
-	{
+	/*{
 		UIPanel* ui = new UIPanel();
 		_uis.push_back(ui);
-	}
+	}*/
 
 
 	GET_SINGLE(ResourceManager)->LoadSound(L"BGM", L"Sound\\BGM.wav");

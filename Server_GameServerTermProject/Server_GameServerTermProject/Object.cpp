@@ -24,7 +24,7 @@ int Object::Damage(int damageValue, bool& isSuccess)
 		int expect = _hp;
 		if (_hp <= 0) {
 			isSuccess = false;
-			return _hp; // 이미 죽은 몬스터임
+			return _hp; // 이미 죽음
 		}
 		int update = _hp - damageValue;
 		if (atomic_compare_exchange_strong(reinterpret_cast<std::atomic_int*>(&_hp), &expect, update))
@@ -36,7 +36,7 @@ int Object::Damage(int damageValue, bool& isSuccess)
 	return _hp;
 }
 
-bool Object::SetExp(int exp)
+bool Object::SetAddExp(int exp)
 {
 	bool isLevelUp = false;
 	_exp = exp + _exp; 

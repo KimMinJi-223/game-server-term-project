@@ -12,49 +12,93 @@ void Monster::Init(int id, int x, int y)
 		_isAgro = false;
 		_isRoaming = false;
 		_roamingArea = 0;
+		_power = 10;
 	}
 	else if (id < NUM_NPC_2) {
 		_monsterType = VI_MONSTER_2;
 		_isAgro = false;
 		_isRoaming = true;
 		_roamingArea = 10;
+		_power = 10;
+
 	}
 	else if (id < NUM_NPC_3) {
 		_monsterType = VI_MONSTER_3;
 		_isAgro = true;
 		_isRoaming = false;
 		_roamingArea = 0;
+		_power = 10;
+
+		_L = luaL_newstate();
+		luaL_openlibs(_L);
+		luaL_loadfile(_L, "monster.lua");
+		lua_pcall(_L, 0, 0, 0);
+
+		lua_register(_L, "API_GetPosX", Server::API_GetPosX);
+		lua_register(_L, "API_GetPosY", Server::API_GetPosY);
+		lua_register(_L, "API_AStarStart", Server::API_AStarStart);
+		lua_register(_L, "API_AStarEnd", Server::API_AStarEnd);
+		lua_register(_L, "API_AddTimer", Server::API_AddTimer);
+
+		lua_getglobal(_L, "set_init");
+		lua_pushnumber(_L, id);
+		lua_pushnumber(_L, x);
+		lua_pushnumber(_L, y);
+		lua_pushnumber(_L, _monsterType);
+		lua_pcall(_L, 4, 0, 0);
 	}
 	else if (id < NUM_NPC_4) {
 		_monsterType = VI_MONSTER_4;
 		_isAgro = true;
 		_isRoaming = true;
 		_roamingArea = 10;
+		_power = 10;
+
+		_L = luaL_newstate();
+		luaL_openlibs(_L);
+		luaL_loadfile(_L, "monster.lua");
+		lua_pcall(_L, 0, 0, 0);
+
+		lua_register(_L, "API_GetPosX", Server::API_GetPosX);
+		lua_register(_L, "API_GetPosY", Server::API_GetPosY);
+		lua_register(_L, "API_AStarStart", Server::API_AStarStart);
+		lua_register(_L, "API_AStarEnd", Server::API_AStarEnd);
+		lua_register(_L, "API_AddTimer", Server::API_AddTimer);
+
+		lua_getglobal(_L, "set_init");
+		lua_pushnumber(_L, id);
+		lua_pushnumber(_L, x);
+		lua_pushnumber(_L, y);
+		lua_pushnumber(_L, _monsterType);
+		lua_pcall(_L, 4, 0, 0);
 	}
 	else  {
 		_monsterType = VI_MONSTER_4;
 		_isAgro = true;
 		_isRoaming = true;
 		_roamingArea = 10;
+		_power = 10;
+
+		_L = luaL_newstate();
+		luaL_openlibs(_L);
+		luaL_loadfile(_L, "monster.lua");
+		lua_pcall(_L, 0, 0, 0);
+
+		lua_register(_L, "API_GetPosX", Server::API_GetPosX);
+		lua_register(_L, "API_GetPosY", Server::API_GetPosY);
+		lua_register(_L, "API_AStarStart", Server::API_AStarStart);
+		lua_register(_L, "API_AStarEnd", Server::API_AStarEnd);
+		lua_register(_L, "API_AddTimer", Server::API_AddTimer);
+
+		lua_getglobal(_L, "set_init");
+		lua_pushnumber(_L, id);
+		lua_pushnumber(_L, x);
+		lua_pushnumber(_L, y);
+		lua_pushnumber(_L, _monsterType);
+		lua_pcall(_L, 4, 0, 0);
 	}
 
-	_L = luaL_newstate();
-	luaL_openlibs(_L);
-	luaL_loadfile(_L, "monster.lua");
-	lua_pcall(_L, 0, 0, 0);
-
-	lua_register(_L, "API_GetPosX", Server::API_GetPosX);
-	lua_register(_L, "API_GetPosY", Server::API_GetPosY);
-	lua_register(_L, "API_AStarStart", Server::API_AStarStart);
-	lua_register(_L, "API_AStarEnd", Server::API_AStarEnd);
-	lua_register(_L, "API_AddTimer", Server::API_AddTimer);
-
-	lua_getglobal(_L, "set_init");
-	lua_pushnumber(_L, id);
-	lua_pushnumber(_L, x);
-	lua_pushnumber(_L, y);
-	lua_pushnumber(_L, _monsterType);
-	lua_pcall(_L, 4, 0, 0);
+	
 
 	char name[NAME_SIZE];
 	sprintf_s(name, "M%d", id);

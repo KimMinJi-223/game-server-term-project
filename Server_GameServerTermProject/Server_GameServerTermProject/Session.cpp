@@ -14,6 +14,9 @@ void Session::Login(int x, int y, int hp, int level, int exp, int power)
 	_pos.y = y;
 	_hp = hp;
 	_maxHp = DEFALUT_MAX_HP * level;
+	if (_hp <= 0) {
+		_hp = _maxHp / 2;
+	}
 	_level = level;
 	_exp = exp;
 	_power = 100;
@@ -160,6 +163,20 @@ void Session::send_level_change_packet(int id, int level, int exp)
 	p.id = id;
 	p.level = level;
 	p.exp = exp;
+
+	do_send(&p);
+}
+
+void Session::send_respawn_packet()
+{
+	SC_RESPAWN_PACKET p;
+	p.size = sizeof(SC_RESPAWN_PACKET);
+	p.type = SC_RESPAWN;
+	p.x = _pos.x;
+	p.y = _pos.y;
+	p.direction = _dir;
+	p.hp = _hp;
+	p.exp = _exp;
 
 	do_send(&p);
 }

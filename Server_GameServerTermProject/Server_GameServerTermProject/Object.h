@@ -52,7 +52,8 @@ public:
 	int GetDir() { return _dir; }
 	void SetLevel(int level) { _level = level; }
 	int GetLevel() { return _level; }
-	bool SetExp(int exp); // 반환값은 레벨업 유무
+	bool SetAddExp(int exp); // 반환값은 레벨업 유무
+	void SetExp(int exp) { _exp = exp; }; // 반환값은 레벨업 유무
 	int GetExp() { return _exp; }
 	void SetHp(int hp) { _hp = hp; }
 	int GetHp() { return _hp; }

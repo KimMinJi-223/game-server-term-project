@@ -62,7 +62,7 @@ public:
 public:
 	void AStar(int& x, int& y, int id);
 	int FindAttackedMonster(int id);
-	int FindASkillMonster(int id, int* ids);
+	bool FindASkillMonster(int id, int* ids);
 public:
 	int get_new_client_id();
 	bool can_see(int a, int b);

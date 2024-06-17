@@ -108,6 +108,9 @@ void NetworkManager::ProcessPacket(char* p)
 		if (id == myId) {
 			avatar->SetCellPos(VectorInt{ packet->x, packet->y }, true);
 			avatar->SetState(State::Idle);
+			avatar->SetName(packet->name);
+			avatar->SetHp(packet->hp);
+			avatar->SetLevel(packet->level);
 		}
 		else {
 			if (id < MAX_USER) {
@@ -184,8 +187,9 @@ void NetworkManager::ProcessPacket(char* p)
 		HWND hListBox = GetDlgItem(_hwnd, 1000);
 		wchar_t message[(CHAT_SIZE + NAME_SIZE) / 2];
 
+
 		wchar_t name[NAME_SIZE / 2];
-		MultiByteToWideChar(CP_ACP, 0, avatar->GetName(), -1, name, NAME_SIZE / 2);
+		MultiByteToWideChar(CP_ACP, 0, packet->name, -1, name, NAME_SIZE / 2);
 		wchar_t text[CHAT_SIZE/2];
 		MultiByteToWideChar(CP_ACP, 0, packet->mess, -1, text, CHAT_SIZE / 2);
 		swprintf(message, NAME_SIZE + CHAT_SIZE, L"[%s] : %s", name, text);
@@ -205,6 +209,10 @@ void NetworkManager::ProcessPacket(char* p)
 	{
 		SC_HP_CHANGE_PACKET* packet = reinterpret_cast<SC_HP_CHANGE_PACKET*>(p);
 		int id = packet->id;
+		if (id == myId) {
+			avatar->SetHp(packet->hp);
+		}
+
 
 		if (id < MAX_USER) {
 			auto player = GET_SINGLE(SceneManager)->GetInstance()->GetCurrentScene()->players.find(id);
@@ -235,6 +243,15 @@ void NetworkManager::ProcessPacket(char* p)
 		player->second->SetLevel(packet->level);
 		player->second->SetEXP(packet->exp);
 
+		break;
+	}
+	case SC_RESPAWN:
+	{
+		SC_RESPAWN_PACKET* packet = reinterpret_cast<SC_RESPAWN_PACKET*>(p);
+		avatar->SetCellPos(VectorInt{ packet->x, packet->y }, true);
+		avatar->SetDir(static_cast<Dir>(packet->direction));
+		avatar->SetHp(packet->hp);
+		avatar->SetEXP(packet->exp);
 		break;
 	}
 	default:

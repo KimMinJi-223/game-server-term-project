@@ -36,6 +36,7 @@ public:
 	void send_exp_change_packet();
 	void send_hp_change_packet(int id, int hp);
 	void send_level_change_packet(int id, int level, int exp);
+	void send_respawn_packet();
 
 public:
 	void GetRefViewList(std::unordered_set<int>& view);

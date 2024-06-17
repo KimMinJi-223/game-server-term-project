@@ -250,16 +250,17 @@ void Server::process_packet(int id, char* packet)
 
 			if (remainingHp != 0) {
 				// 죽은건 아니면 체력을 수정
+
 				for (auto id : PlayerList) {
 					Session* Players = reinterpret_cast<Session*>(objects[id]);
 					Players->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
 				}
 			}
 			else {
-				// 몬스터 죽음
-				_timerQueue.add_timer(AttackedId, -1, EV_RESPAWN, 5000);
+				// 몬스터 죽음 부활
+				_timerQueue.add_timer(AttackedId, -1, EV_RESPAWN, 30000);
 				// 죽인 플레이어의 경험치 설정
-				if (objects[id]->SetExp(objects[AttackedId]->GetExpOnDeath())) {
+				if (objects[id]->SetAddExp(objects[AttackedId]->GetExpOnDeath())) {
 					player->send_level_change_packet(id, player->GetLevel(), player->GetExp());
 					
 					// 레벨업 뷰리스트에 있는 플레이어에게 보내기
@@ -277,8 +278,8 @@ void Server::process_packet(int id, char* packet)
 				}
 
 				// 모든 플레이어에게 remove보내기
+				objects[AttackedId]->SetPosition(-100, -100);
 				for (auto id : PlayerList) {
-					objects[AttackedId]->SetPosition(-100, -100);
 					Session* Players = reinterpret_cast<Session*>(objects[id]);
 					Players->send_remove_player_packet(AttackedId);
 				}
@@ -290,19 +291,62 @@ void Server::process_packet(int id, char* packet)
 	}
 	case CS_A_SKILL: {
 		int findIds[4]{ -1, -1, -1, -1 };
-		int AttackedId = FindASkillMonster(id, findIds);
-		if (AttackedId == -1)
+		bool isSuccess = FindASkillMonster(id, findIds);
+		if (isSuccess == -1)
 			break;
 
 		for (int i = 0; i < 4; ++i) {
 			if (findIds[i] == -1)
 				continue;
-			objects[id]->Attack(findIds[i]);
-			objects[id]->SetExp(objects[AttackedId]->GetLevel());
-			objects[findIds[i]]->SetPosition(0, 0);
+
 			Session* player = reinterpret_cast<Session*>(objects[id]);
-			player->send_move_packet(*objects[findIds[i]], 0);
-			player->send_exp_change_packet();
+
+			int damage = objects[id]->GetPower();
+			isSuccess = false;;
+			int remainingHp = objects[findIds[i]]->Damage(damage, isSuccess);
+			if (isSuccess) {
+				// 공격성공
+				std::unordered_set<int> PlayerList;
+				GetNearPlayersList(findIds[i], PlayerList);
+
+				if (remainingHp != 0) {
+					// 죽은건 아니면 체력을 수정
+
+					for (auto id : PlayerList) {
+						Session* Players = reinterpret_cast<Session*>(objects[id]);
+						Players->send_hp_change_packet(findIds[i], objects[findIds[i]]->GetHp());
+					}
+				}
+				else {
+					// 몬스터 죽음 부활S
+					_timerQueue.add_timer(findIds[i], -1, EV_RESPAWN, 30000);
+					// 죽인 플레이어의 경험치 설정
+					if (objects[id]->SetAddExp(objects[findIds[i]]->GetExpOnDeath())) {
+						player->send_level_change_packet(id, player->GetLevel(), player->GetExp());
+
+						// 레벨업 뷰리스트에 있는 플레이어에게 보내기
+						std::unordered_set<int> nearPlayer;
+						player->GetRefViewList(nearPlayer);
+						for (auto playerId : nearPlayer) {
+							Session* otherPlayer = reinterpret_cast<Session*>(objects[playerId]);
+							otherPlayer->send_level_change_packet(id, player->GetLevel(), player->GetExp());
+						}
+
+					}
+					else {
+						// 경험치만 올리기
+						player->send_exp_change_packet();
+					}
+
+					// 모든 플레이어에게 remove보내기
+					objects[findIds[i]]->SetPosition(-100, -100);
+					for (auto id : PlayerList) {
+						Session* Players = reinterpret_cast<Session*>(objects[id]);
+						Players->send_remove_player_packet(findIds[i]);
+					}
+				}
+
+			}
 		}
 		break;
 	}
@@ -403,11 +447,11 @@ void Server::WorkerThread()
 			Pos pos = player->GetPosition();
 
 			while (true) {
+				pos.x = rand() % W_WIDTH;
+				pos.y = rand() % W_HEIGHT;
 				if (can_go(pos.x, pos.y)) {
 					break;
 				}
-				pos.x = rand() % W_WIDTH;
-				pos.y = rand() % W_HEIGHT;
 
 			}
 
@@ -539,7 +583,7 @@ void Server::WorkerThread()
 				break;
 			}
 
-			int x = 3;
+			int x = 0;
 			int y = 0;
 			AStar(x, y, key);
 
@@ -573,23 +617,133 @@ void Server::WorkerThread()
 			break;
 		}
 		case OP_NPC_ATTACK: {
-			// NPC가 공격하는 것을 처리
-			// 공격은 서버에서 처리하자. 근데 루아에서 A*를 돌렸을때 플레이어가 앞에 있다면 이것이 실행되게 POST한다. 
+			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
+			int AttackedId = ex_over->_cause_player_id;
+			Session* player = reinterpret_cast<Session*>(objects[AttackedId]);
+			int damageValue = monster->GetPower();
+			bool isSuccess;
+			int remainingHp = player->Damage(damageValue, isSuccess);
+			if (isSuccess) {
+				// 공격성공
+				std::unordered_set<int> PlayerList;
+				player->GetRefViewList(PlayerList);
+
+				if (remainingHp != 0) {
+					player->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
+					for (auto id : PlayerList) {
+						Session* Players = reinterpret_cast<Session*>(objects[id]);
+						if(!Players->GetIsNpc())
+							Players->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
+					}
+				}
+				else {
+					//player->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
+					while (true) {
+						Pos pos;
+						pos.x = rand() % W_WIDTH / 40;
+						pos.y = rand() % W_HEIGHT / 40;
+						if (can_go(pos.x, pos.y)) {
+							player->SetExp(player->GetExp() / 2);
+							player->send_exp_change_packet();
+							player->SetSpawnPos({ pos.x, pos.y });
+							break;
+						}
+ 					}
+
+					for (auto id : PlayerList) {
+						//std::cout << "플레이어 죽음" << std::endl;
+						player->send_remove_player_packet(id);
+						Session* Players = reinterpret_cast<Session*>(objects[id]);
+						if (!Players->GetIsNpc()) {
+							Players->send_remove_player_packet(AttackedId);
+						}
+					}
+					_timerQueue.add_timer(AttackedId, -1, EV_RESPAWN, 3000);
+				}
+
+			}
+			delete ex_over;
 			break;
 		}
 		case OP_RESPAWN:
-			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
-			Pos pos = objects[key]->GetSpawnPos();
-			objects[key]->SetPosition(pos.x, pos.y);
-			objects[key]->SetHp(objects[key]->GetMaxHp());
-			SetSectorId(*objects[key], key, pos.x, pos.y);
+			if (objects[key]->GetIsNpc()) {
+				Monster* monster = reinterpret_cast<Monster*>(objects[key]);
+				Pos pos = objects[key]->GetSpawnPos();
+				monster->SetPosition(pos.x, pos.y);
+				monster->SetHp(monster->GetMaxHp());
+				SetSectorId(*objects[key], key, pos.x, pos.y);
 
-			std::unordered_set<int> playerList;
-			GetNearPlayersList(key, playerList);
+				std::unordered_set<int> playerList;
+				GetNearPlayersList(key, playerList);
 
-			for (auto playerId : playerList) {
-				Session* player = reinterpret_cast<Session*>(objects[playerId]);
-				player->send_add_player_packet(*objects[key], monster->GetMonsterType());
+				for (auto playerId : playerList) {
+					Session* player = reinterpret_cast<Session*>(objects[playerId]);
+					player->send_add_player_packet(*objects[key], monster->GetMonsterType());
+				}
+			}
+			else {
+				Session* player = reinterpret_cast<Session*>(objects[key]);
+				Pos pos = player->GetSpawnPos();;
+				player->SetPosition(pos.x, pos.y);
+				player->SetHp(player->GetMaxHp());
+				SetSectorId(*objects[key], key, pos.x, pos.y);
+
+				int sectorId = (pos.x / SECTOR_SIZE) + ((pos.y / SECTOR_SIZE) * MULTIPLY_ROW);
+				sectors[sectorId].AddPlayerList(key);
+
+				player->send_respawn_packet();
+
+				std::unordered_set<int> playerList;
+				int adj_index = 0;
+
+				for (int i = 0; i < ADJ_COUNT; ++i) {
+					adj_index = sectorId - adj_sector[i];
+					if (adj_index < 0 || adj_index > SECTOR_COUNT - 1)
+						continue;
+
+					sectors[adj_index].GetPlayerList(playerList);
+
+					for (auto& pl_id : playerList) {
+						Object& cl = *(objects[pl_id]);
+						{
+							std::lock_guard<std::mutex> ll(cl.GetStateMutex());
+							if (ST_INGAME != cl.GetState()) continue;
+						}
+						if (pl_id == key)
+							continue;
+						if (true == can_see(pl_id, key)) {
+							if (true == cl.GetIsNpc()) {
+								Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
+
+								if (monster->GetIsAgro()) {
+									if (!monster->GetISAIMove()) {
+										OVER_EXP* exover = new OVER_EXP;
+										exover->_comp_type = OP_AI_LUA;
+										exover->_cause_player_id = key;
+										PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
+									}
+								}
+
+								player->send_add_player_packet(cl, monster->GetMonsterType());
+
+								if (false == monster->GetIsActive()) {
+									if (true == monster->CASIsActive(false, true)) {
+										if (monster->GetIsRoaming())
+											_timerQueue.add_timer(pl_id, -1, EV_RANDOM_MOVE, 1000);
+									}
+									continue;
+								}
+								else {
+									player->send_add_player_packet(cl, monster->GetMonsterType());
+								}
+							}
+							else {
+								player->send_add_player_packet(cl, VI_PLAYER);
+								reinterpret_cast<Session*>(&cl)->send_add_player_packet(*player, VI_PLAYER);
+							}
+						}
+					}
+				}
 			}
 			delete ex_over;
 			break;
@@ -635,9 +789,9 @@ void Server::disconnect(int key)
 void Server::BroadCastChat(int id, char* p)
 {
 	SC_CHAT_PACKET chatPacket;
-	chatPacket.size = sizeof(SC_CHAT_PACKET) - CHAT_SIZE + strlen(p) + 1;
+	chatPacket.size = sizeof(SC_CHAT_PACKET) - CHAT_SIZE + strlen(p) + 1 + strlen(objects[id]->GetName()) + 1;
 	chatPacket.type = static_cast<int>(SC_CHAT);
-	chatPacket.id = id;
+	memcpy_s(chatPacket.name, NAME_SIZE, objects[id]->GetName(), NAME_SIZE);
 	memcpy_s(chatPacket.mess, CHAT_SIZE, p, CHAT_SIZE);
 
 	for (int i = 0; i < MAX_USER; ++i) {
@@ -788,7 +942,7 @@ int Server::SetSectorId(Object& obj, int id, int x, int y)
 
 void Server::AStar(int& x, int& y, int id)
 {
-	std::cout << "Astar\n";
+	//std::cout << "Astar\n";
 
 	bool pathSuccess = false;
 	static int DIR_COUNT = 4;
@@ -809,10 +963,13 @@ void Server::AStar(int& x, int& y, int id)
 
 	if (startPos == destPos) {
 		while (true) {
-			x = rand() % 2000;
-			y = rand() % 2000;
-			if (can_go(x, y))
-				break;
+			x = startPos.x;
+			y = startPos.y;
+			OVER_EXP* exover = new OVER_EXP;
+			exover->_comp_type = OP_NPC_ATTACK;
+			exover->_cause_player_id = target;
+			PostQueuedCompletionStatus(_hiocp, 1, id, &exover->_over);
+			break;
 		}
 		monster->SetPosition(x, y);
 		return;
@@ -950,7 +1107,7 @@ int Server::FindAttackedMonster(int id)
 	return -1;
 }
 
-int Server::FindASkillMonster(int id, int* ids)
+bool Server::FindASkillMonster(int id, int* ids)
 {
 	static Pos moveDir[] = { Pos{0, -1}, Pos{0, 1}, Pos{-1, 0}, Pos{1, 0} };
 	// 뷰리스트에서 몬스터 찾기
@@ -985,8 +1142,8 @@ int Server::FindASkillMonster(int id, int* ids)
 		}
 	}
 	if(isFInd)
-		return 0;
-	return -1;
+		return true;
+	return false;
 }
 
 int Server::get_new_client_id()
