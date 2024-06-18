@@ -157,8 +157,9 @@ bool DB::send_login(const wchar_t* sqlArr, Session* player)
 	}
 	if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO)
 	{
-		if (success == true)
-			printf("유저가 존재합니다.\n");
+		if (success == true) {
+			//printf("유저가 존재합니다.\n");
+		}
 		else {
 			printf("유저가 없어 유저를 추가했습니다.\n");
 		}

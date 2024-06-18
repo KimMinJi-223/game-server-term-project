@@ -92,6 +92,12 @@ void Player::Render(HDC hdc)
 		// ·¹º§
 		str = std::format(L"LEVEL : {0}", _level);
 		::TextOut(hdc, 50, 30, str.c_str(), static_cast<int32>(str.size()));
+
+		POINT mousePos = GET_SINGLE(InputManager)->GetMoustPos();
+
+		str = std::format(L"Pos({0}, {1})", (int)_pos.x / 30, (int)_pos.y / 30);
+		::TextOut(hdc, 450, 10, str.c_str(), static_cast<int32>(str.size()));
+
 	}
 }
 
