@@ -521,6 +521,10 @@ void Server::WorkerThread()
 				}
 			}
 
+			if (player->GetHp() < player->GetMaxHp()) {
+				if(player->CASIsHeal(false, true))
+					_timerQueue.add_timer(key, -1, EV_HEAL, 5000);
+			}
 		}
 		delete ex_over;
 		break;
@@ -627,7 +631,8 @@ void Server::WorkerThread()
 				// 공격성공
 				std::unordered_set<int> PlayerList;
 				player->GetRefViewList(PlayerList);
-
+				if(player->CASIsHeal(false, true)) 
+					_timerQueue.add_timer(AttackedId, -1, EV_HEAL, 5000);
 				if (remainingHp != 0) {
 					player->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
 					for (auto id : PlayerList) {
@@ -743,6 +748,26 @@ void Server::WorkerThread()
 							}
 						}
 					}
+				}
+			}
+			delete ex_over;
+			break;
+		case OP_HEAL:
+			if (true == objects[key]->Heal())
+				_timerQueue.add_timer(key, -1, EV_HEAL, 5000);
+			else
+				objects[key]->SetHeal(false);
+
+			Session* player = reinterpret_cast<Session*>(objects[key]);
+			int hp = player->GetHp();
+			player->send_hp_change_packet(key, hp);
+
+			std::unordered_set<int> playerList;
+			player->GetRefViewList(playerList);
+
+			for (int id : playerList) {
+				if (!objects[id]->GetIsNpc()) {
+					reinterpret_cast<Session*>(objects[id])->send_hp_change_packet(key, hp);
 				}
 			}
 			delete ex_over;

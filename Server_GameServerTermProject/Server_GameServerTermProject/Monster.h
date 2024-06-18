@@ -24,6 +24,7 @@ public:
 	void move(int& x, int& y);
 	void AddTimer(int id);
 	void IsAStar(int PlayerId, int x, int y);
+
 public:
 	bool GetIsActive() { return _is_active; }
 	void SetIsActive(bool newActive) { _is_active = newActive; }

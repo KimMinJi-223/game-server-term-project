@@ -48,6 +48,10 @@ void Timer::do_timer()
 				ov->_comp_type = OP_RESPAWN;
 				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
 				break;
+			case EV_HEAL:
+				ov->_comp_type = OP_HEAL;
+				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
+				break;
 			}
 
 			continue;

@@ -79,14 +79,12 @@ void Player::Render(HDC hdc)
 	if (GET_SINGLE(NetworkManager)->GetInstance()->myId == _id) {
 	::Rectangle(hdc, 50, 0, 150, 15);
 
-	HBRUSH hBrushRed = CreateSolidBrush(RGB(255, 0, 0));
-	HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrushRed);
-	::Rectangle(hdc, 50, 0, (((float)_hp / _maxHp) * 100) + 50, 15);
-	SelectObject(hdc, hOldBrush);
-	DeleteObject(hBrushRed);
-
 		// exp
 		std::wstring str = std::format(L"EXP : {0}", _exp);
+		::TextOut(hdc, 50, 0, str.c_str(), static_cast<int32>(str.size()));
+
+		// 체력
+		str = std::format(L"HP : {0}", _hp);
 		::TextOut(hdc, 50, 15, str.c_str(), static_cast<int32>(str.size()));
 
 		// 레벨

@@ -1,4 +1,5 @@
 #include "Object.h"
+#include "Session.h"
 
 void Object::Init(int x, int y, int id, const char* name)
 {
@@ -36,6 +37,24 @@ int Object::Damage(int damageValue, bool& isSuccess)
 	return _hp;
 }
 
+bool Object::Heal()
+{
+	if (_hp < _maxHp)
+		_hp += (_maxHp / 10);
+
+	if (_hp >= _maxHp) {
+		_hp = _maxHp;
+		return false;
+	}
+	return true;
+}
+
+bool Object::CASIsHeal(bool expect, bool update)
+{
+	bool input = expect;
+	return atomic_compare_exchange_strong(&_isHeal, &input, update);
+}
+
 bool Object::SetAddExp(int exp)
 {
 	bool isLevelUp = false;
@@ -45,7 +64,8 @@ bool Object::SetAddExp(int exp)
 			isLevelUp = true;
 			_exp %= _maxExp;
 			++_level;
-			_maxExp = DEFALUT_EXP * pow(2, _level - 1);;
+			_maxExp = DEFALUT_EXP * pow(2, _level - 1);
+			_maxHp = DEFALUT_MAX_HP * _level;
 		}
 		else return isLevelUp;
 	}

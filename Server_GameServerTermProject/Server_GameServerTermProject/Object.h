@@ -15,6 +15,7 @@ protected:
 	int _dir;
 	int _sectorId;
 	bool	_is_npc;
+	std::atomic<bool> _isHeal = false;
 
 	int _hp;
 	int	_maxHp;
@@ -33,6 +34,8 @@ public:
 public:
 	void Attack(int target);
 	int Damage(int damageValue, bool& isSuccess); // 체력을 반환
+	bool Heal();
+	bool CASIsHeal(bool expect, bool update);
 
 public:
 	std::mutex& GetStateMutex() { return _s_lock; }
@@ -64,5 +67,6 @@ public:
 	void SetPower(int power) { _power = power; }
 	int GetPower() { return _power; }
 	virtual int GetExpOnDeath() { return 0; }
+	void SetHeal(bool newHeal) { _isHeal = newHeal; }
 };
 

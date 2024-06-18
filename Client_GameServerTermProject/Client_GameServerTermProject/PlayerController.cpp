@@ -68,7 +68,7 @@ void PlayerController::Update()
 		
 
 	}
-	else if (GET_SINGLE(InputManager)->GetButtonDown(KeyType::Q))
+	else if (GET_SINGLE(InputManager)->GetButtonDown(KeyType::S))
 	{
 		CS_ATTACK_PACKET packet;
 		packet.size = sizeof(CS_ATTACK_PACKET);
