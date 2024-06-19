@@ -100,8 +100,8 @@ void DisconnectClient(int ci)
 	if (true == atomic_compare_exchange_strong(&g_clients[ci].connected, &status, false)) {
 		closesocket(g_clients[ci].client_socket);
 		active_clients--;
+		cout << "Client [" << ci << "] Disconnected!\n";
 	}
-	// cout << "Client [" << ci << "] Disconnected!\n";
 }
 
 void SendPacket(int cl, void* packet)
@@ -185,7 +185,7 @@ void Worker_Thread()
 			int err_no = WSAGetLastError();
 			if (64 == err_no) DisconnectClient(client_id);
 			else {
-				// error_display("GQCS : ", WSAGetLastError());
+				//error_display("GQCS : ", WSAGetLastError());
 				DisconnectClient(client_id);
 			}
 			if (OP_SEND == over->event_type) delete over;

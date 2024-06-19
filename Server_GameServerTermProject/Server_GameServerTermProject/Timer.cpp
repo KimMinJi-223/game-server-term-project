@@ -7,50 +7,50 @@ void Timer::Init(HANDLE hiocp)
 	_hiocp = hiocp;
 }
 
-void Timer::add_timer(int obj_id, int targetId, EVENT_TYPE et, int ms)
+void Timer::AddTaskTimer(int id, int targetId, EVENT_TYPE et, int ms)
 {
 	TIMER_EVENT ev;
-	ev.obj_id = obj_id;
-	ev.target_obj = targetId;
-	ev.event_type = et;
-	ev.wakeup_time = std::chrono::system_clock::now() + std::chrono::milliseconds(ms);
-	_timer_queue.push(ev);
+	ev.id = id;
+	ev.targetId = targetId;
+	ev.eventType = et;
+	ev.wakeupTime = std::chrono::system_clock::now() + std::chrono::milliseconds(ms);
+	_timerTaskQueue.push(ev);
 }
 
-void Timer::do_timer()
+void Timer::startTimerThread()
 {
 	while (true) {
 		TIMER_EVENT ev;
 		auto current_time = std::chrono::system_clock::now();
-		if (_timer_queue.try_pop(ev)) {
-			if (ev.wakeup_time > current_time) {
-				_timer_queue.push(ev);
+		if (_timerTaskQueue.try_pop(ev)) {
+			if (ev.wakeupTime > current_time) {
+				_timerTaskQueue.push(ev);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}
 			OVER_EXP* ov = new OVER_EXP;
-			switch (ev.event_type) {
+			switch (ev.eventType) {
 			case EV_RANDOM_MOVE:
 				ov->_comp_type = OP_NPC_MOVE;
-				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
+				PostQueuedCompletionStatus(_hiocp, 1, ev.id, &ov->_over);
 				break;
 			case EV_AI_MOVE:
 				ov->_comp_type = OP_AI_MOVE;
-				ov->_cause_player_id = ev.target_obj;
-				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
+				ov->_cause_player_id = ev.targetId;
+				PostQueuedCompletionStatus(_hiocp, 1, ev.id, &ov->_over);
 				break;
 			case EV_AI_LUA:
 				ov->_comp_type = OP_AI_LUA;
-				ov->_cause_player_id = ev.target_obj;
-				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
+				ov->_cause_player_id = ev.targetId;
+				PostQueuedCompletionStatus(_hiocp, 1, ev.id, &ov->_over);
 				break;
 			case EV_RESPAWN:
 				ov->_comp_type = OP_RESPAWN;
-				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
+				PostQueuedCompletionStatus(_hiocp, 1, ev.id, &ov->_over);
 				break;
 			case EV_HEAL:
 				ov->_comp_type = OP_HEAL;
-				PostQueuedCompletionStatus(_hiocp, 1, ev.obj_id, &ov->_over);
+				PostQueuedCompletionStatus(_hiocp, 1, ev.id, &ov->_over);
 				break;
 			}
 

@@ -22,7 +22,7 @@ function set_init(id, x, y, type)
    --print(moveState, roamingArea, radarArea, followArea);
 end
 
-function IsAStar(playerId, x, y)
+function isDoAStar(playerId, x, y)
     -- 타겟이 없다면
     if(target == -1) then 
         my_x = API_GetPosX(myid);

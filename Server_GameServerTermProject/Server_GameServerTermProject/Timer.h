@@ -4,28 +4,28 @@
 #include <chrono>
 
 struct TIMER_EVENT {
-	int	obj_id;
-	std::chrono::system_clock::time_point wakeup_time;
-	EVENT_TYPE event_type;
-	int target_obj;
+	int	id;
+	std::chrono::system_clock::time_point wakeupTime;
+	EVENT_TYPE eventType;
+	int targetId;
 
 	bool operator<(const TIMER_EVENT& e) const
 	{
-		return wakeup_time > e.wakeup_time;
+		return wakeupTime > e.wakeupTime;
 	}
 };
 
 class Timer
 {
 private:
-	concurrency::concurrent_priority_queue<TIMER_EVENT> _timer_queue;
+	concurrency::concurrent_priority_queue<TIMER_EVENT> _timerTaskQueue;
 	HANDLE _hiocp;
+
 public:
 	void Init(HANDLE hiocp);
 
 public:
-	void add_timer(int obj_id, int targetId, EVENT_TYPE et, int ms);
-	void do_timer();
-
+	void AddTaskTimer(int id, int targetId, EVENT_TYPE et, int ms);
+	void startTimerThread();
 };
 

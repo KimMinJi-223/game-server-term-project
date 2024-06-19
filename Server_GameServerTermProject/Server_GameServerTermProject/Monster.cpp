@@ -2,7 +2,7 @@
 #include "Server.h"
 #include <iostream>
 
-void Monster::Init(int id, int x, int y)
+void Monster::init(int id, int x, int y)
 {
 	if((id - MAX_USER) % 10000 == 0)
 		printf("%d 마리\n", id - MAX_USER);
@@ -99,7 +99,6 @@ void Monster::Init(int id, int x, int y)
 	}
 
 	
-
 	char name[NAME_SIZE];
 	sprintf_s(name, "M%d", id);
 	Object::Init(x, y, id, name);
@@ -108,14 +107,10 @@ void Monster::Init(int id, int x, int y)
 
 void Monster::move(int& x, int& y)
 {
-	//printf("move\n");
-	// 단순 영역안에서 이동이면 서버에서 하자. 
-	// 맞았나, 타겟이 범위에 있나 확인은 루아에서하자
-	// 이 이동은 서버에서 다른거는 클라에서
-
-	// 서버에서 움직이는 상태
-	if (!_is_AI_move)
-		Server::GetInstance()->GetTImer()->add_timer(_id,-1, EV_RANDOM_MOVE, 1000);
+	// 루아에서 플레이어를 추적하라는 상태로 바꾸면 EV_RANDOM_MOVE이벤트를 등록하지 않는다. 
+	if (!_isAiMove) 
+		Server::GetInstance()->GetTImer()->AddTaskTimer(_id,-1, EV_RANDOM_MOVE, 1000);
+	
 
 	while (true) {
 		x = _pos.x;
@@ -143,7 +138,7 @@ void Monster::move(int& x, int& y)
 bool Monster::CASIsActive(bool expect, bool update)
 {
 	bool input = expect;
-	return atomic_compare_exchange_strong(&_is_active, &input, update);
+	return atomic_compare_exchange_strong(&_isActive, &input, update);
 }
 
 int Monster::GetExpOnDeath()
@@ -156,36 +151,20 @@ int Monster::GetExpOnDeath()
 	return exp;
 }
 
-void Monster::AddTimer(int id)
+void Monster::isDoAStar(int causeId, int x, int y)
 {
-	lua_lock.lock();
-	lua_getglobal(_L, "add_timer");
-	lua_pushnumber(_L, id);
-	int error = lua_pcall(_L, 1, 0, 0);
-	if (error) {
-		//std::cout << "Error:" << lua_tostring(_L, -1);
-		lua_pop(_L, 1);
-		lua_lock.unlock();
-		
-		return ;
-	}
-	lua_lock.unlock();
-}
-
-void Monster::IsAStar(int playerId, int x, int y)
-{
-	lua_lock.lock();
-	lua_getglobal(_L, "IsAStar");
-	lua_pushnumber(_L, playerId);
+	luaLock.lock();
+	lua_getglobal(_L, "isDoAStar");
+	lua_pushnumber(_L, causeId);
 	lua_pushnumber(_L, x);
 	lua_pushnumber(_L, y);
 	int error = lua_pcall(_L, 3, 0, 0);
 	if (error) {
 		std::cout << "IsAStar Error:" << lua_tostring(_L, -1);
 		lua_pop(_L, 1);
-	lua_lock.unlock();
+		luaLock.unlock();
 		return;
 	}
-	lua_lock.unlock();
+	luaLock.unlock();
 
 }

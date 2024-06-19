@@ -12,10 +12,10 @@ int main()
 	server->Init();
 
 	Timer* timer = server->GetTImer();
-	std::thread timerThread{ [&timer]() {timer->do_timer(); } };
+	std::thread timerThread{ [&timer]() {timer->startTimerThread(); } };
 
 	DB* db = server->GetDB();
-	std::thread dbThread{ [&db]() {db->do_db(); } };
+	std::thread dbThread{ [&db]() {db->startDbThread(); } };
 
 	std::vector<std::thread> worker_threads;
 	int num_threads = std::thread::hardware_concurrency();

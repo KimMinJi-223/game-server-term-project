@@ -65,7 +65,7 @@ void Server::initialize_npc()
 				break;
 		}
 
-		monster->Init(npc_id, x, y);
+		monster->init(npc_id, x, y);
 
 		int sectorId = (x / SECTOR_SIZE) + ((y / SECTOR_SIZE) * MULTIPLY_ROW);
 		objects[npc_id]->SetSectorId(sectorId);
@@ -140,11 +140,10 @@ int Server::API_AStarStart(lua_State* L)
 	int monsterId = (int)lua_tointeger(L, -2);
 	int targetId = (int)lua_tointeger(L, -1);
 	lua_pop(L, 3);
-	Monster* monster = reinterpret_cast<Monster*>(Server::GetInstance()->objects[monsterId]);
 
+	Monster* monster = reinterpret_cast<Monster*>(Server::GetInstance()->objects[monsterId]);
 	monster->SetISAIMove(true);
 	monster->SetTarget(targetId);
-
 	return 0;
 }
 
@@ -155,7 +154,7 @@ int Server::API_AStarEnd(lua_State* L)
 	Monster* monster = reinterpret_cast<Monster*>(Server::GetInstance()->objects[monsterId]);
 
 	if(monster->GetIsRoaming())
-		Server::GetInstance()->GetTImer()->add_timer(monsterId, monsterId, EV_RANDOM_MOVE, 1000);
+		Server::GetInstance()->GetTImer()->AddTaskTimer(monsterId, monsterId, EV_RANDOM_MOVE, 1000);
 
 	monster->SetISAIMove(false);
 	monster->SetTarget(-1);
@@ -174,9 +173,9 @@ int Server::API_AddTimer(lua_State* L)
 	int time = (int)lua_tointeger(L, -1);
 	lua_pop(L, 5);
 
-	Server::GetInstance()->GetTImer()->add_timer(monsterId, targetId, static_cast<EVENT_TYPE>(timerType), time);
+	Server::GetInstance()->GetTImer()->AddTaskTimer(monsterId, targetId, static_cast<EVENT_TYPE>(timerType), time);
 	if (static_cast<EVENT_TYPE>(timerType) == EV_AI_MOVE) {
-		Server::GetInstance()->GetTImer()->add_timer(monsterId, targetId, EV_AI_LUA, time);
+		Server::GetInstance()->GetTImer()->AddTaskTimer(monsterId, targetId, EV_AI_LUA, time);
 	}
 	return 0;
 }
@@ -202,7 +201,7 @@ void Server::process_packet(int id, char* packet)
 		wchar_t sql[50];
 		std::wstring wStr = converter.from_bytes(p->name);
 		swprintf(sql, 50, L"EXEC select_user '%s'", wStr.c_str());
-		_dbQueue.add_exec(reinterpret_cast<Session*>(objects[id]), sql, EV_LOGIN);
+		_dbQueue.addTaskExecDirect(reinterpret_cast<Session*>(objects[id]), sql, EV_LOGIN);
 
 
 		break;
@@ -228,21 +227,19 @@ void Server::process_packet(int id, char* packet)
 		break;
 	}
 	case CS_ATTACK: {
-		Session* movePlayer = reinterpret_cast<Session*>(objects[id]);
-		if (std::chrono::system_clock::now() < movePlayer->_last_attak_time + std::chrono::milliseconds(ATTACK_RATE))
+		Session* player = reinterpret_cast<Session*>(objects[id]);
+		if (std::chrono::system_clock::now() < player->_last_attak_time + std::chrono::milliseconds(ATTACK_RATE))
 			break;
-
-		movePlayer->_last_attak_time = std::chrono::system_clock::now();
+		player->_last_attak_time = std::chrono::system_clock::now();
 
 		int AttackedId = FindAttackedMonster(id);
 		if (AttackedId == -1)
 			break;
-		
-		Session* player = reinterpret_cast<Session*>(objects[id]);
+		Monster* target = reinterpret_cast<Monster*>(objects[AttackedId]);
 
 		int damage = objects[id]->GetPower();
 		bool isSuccess = false;;
-		int remainingHp = objects[AttackedId]->Damage(damage, isSuccess);
+		int remainingHp = target->Damage(damage, isSuccess);
 		if (isSuccess) {
 			// 공격성공
 			std::unordered_set<int> PlayerList;
@@ -253,14 +250,14 @@ void Server::process_packet(int id, char* packet)
 
 				for (auto id : PlayerList) {
 					Session* Players = reinterpret_cast<Session*>(objects[id]);
-					Players->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
+					Players->send_hp_change_packet(AttackedId, target->GetHp());
 				}
 			}
 			else {
 				// 몬스터 죽음 부활
-				_timerQueue.add_timer(AttackedId, -1, EV_RESPAWN, 30000);
+				_timerQueue.AddTaskTimer(AttackedId, -1, EV_RESPAWN, 30000);
 				// 죽인 플레이어의 경험치 설정
-				if (objects[id]->SetAddExp(objects[AttackedId]->GetExpOnDeath())) {
+				if (objects[id]->SetAddExp(target->GetExpOnDeath())) {
 					player->send_level_change_packet(id, player->GetLevel(), player->GetExp());
 					
 					// 레벨업 뷰리스트에 있는 플레이어에게 보내기
@@ -278,7 +275,7 @@ void Server::process_packet(int id, char* packet)
 				}
 
 				// 모든 플레이어에게 remove보내기
-				objects[AttackedId]->SetPosition(-100, -100);
+				target->SetPosition(-100, -100);
 				for (auto id : PlayerList) {
 					Session* Players = reinterpret_cast<Session*>(objects[id]);
 					Players->send_remove_player_packet(AttackedId);
@@ -319,9 +316,11 @@ void Server::process_packet(int id, char* packet)
 				}
 				else {
 					// 몬스터 죽음 부활S
-					_timerQueue.add_timer(findIds[i], -1, EV_RESPAWN, 30000);
+					Monster* target = reinterpret_cast<Monster*>(objects[findIds[i]]);
+
+					_timerQueue.AddTaskTimer(findIds[i], -1, EV_RESPAWN, 30000);
 					// 죽인 플레이어의 경험치 설정
-					if (objects[id]->SetAddExp(objects[findIds[i]]->GetExpOnDeath())) {
+					if (objects[id]->SetAddExp(target->GetExpOnDeath())) {
 						player->send_level_change_packet(id, player->GetLevel(), player->GetExp());
 
 						// 레벨업 뷰리스트에 있는 플레이어에게 보내기
@@ -505,7 +504,7 @@ void Server::WorkerThread()
 								if (true == monster->CASIsActive(false, true)) {
 									// 타이머가 호출되고 로밍 몬스터의 경우 영역에서 움직이는거를 루아가 계산한다. 
 									if (monster->GetIsRoaming())
-										_timerQueue.add_timer(pl_id, -1, EV_RANDOM_MOVE, 1000);
+										_timerQueue.AddTaskTimer(pl_id, -1, EV_RANDOM_MOVE, 1000);
 								}
 								continue;
 							}
@@ -523,7 +522,7 @@ void Server::WorkerThread()
 
 			if (player->GetHp() < player->GetMaxHp()) {
 				if(player->CASIsHeal(false, true))
-					_timerQueue.add_timer(key, -1, EV_HEAL, 5000);
+					_timerQueue.AddTaskTimer(key, -1, EV_HEAL, 5000);
 			}
 		}
 		delete ex_over;
@@ -616,7 +615,7 @@ void Server::WorkerThread()
 		case OP_AI_LUA: {
 			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
 			Pos causePos = objects[ex_over->_cause_player_id]->GetPosition();
-			monster->IsAStar(ex_over->_cause_player_id, causePos.x, causePos.y);
+			monster->isDoAStar(ex_over->_cause_player_id, causePos.x, causePos.y);
 			delete ex_over;
 			break;
 		}
@@ -632,7 +631,7 @@ void Server::WorkerThread()
 				std::unordered_set<int> PlayerList;
 				player->GetRefViewList(PlayerList);
 				if(player->CASIsHeal(false, true)) 
-					_timerQueue.add_timer(AttackedId, -1, EV_HEAL, 5000);
+					_timerQueue.AddTaskTimer(AttackedId, -1, EV_HEAL, 5000);
 				if (remainingHp != 0) {
 					player->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
 					for (auto id : PlayerList) {
@@ -645,8 +644,8 @@ void Server::WorkerThread()
 					//player->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
 					while (true) {
 						Pos pos;
-						pos.x = rand() % W_WIDTH;
-						pos.y = rand() % W_HEIGHT;
+						pos.x = rand() % W_WIDTH / 40;
+						pos.y = rand() % W_HEIGHT / 40;
 						if (can_go(pos.x, pos.y)) {
 							player->SetExp(player->GetExp() / 2);
 							player->send_exp_change_packet();
@@ -663,7 +662,7 @@ void Server::WorkerThread()
 							Players->send_remove_player_packet(AttackedId);
 						}
 					}
-					_timerQueue.add_timer(AttackedId, -1, EV_RESPAWN, 3000);
+					_timerQueue.AddTaskTimer(AttackedId, -1, EV_RESPAWN, 3000);
 				}
 
 			}
@@ -734,7 +733,7 @@ void Server::WorkerThread()
 								if (false == monster->GetIsActive()) {
 									if (true == monster->CASIsActive(false, true)) {
 										if (monster->GetIsRoaming())
-											_timerQueue.add_timer(pl_id, -1, EV_RANDOM_MOVE, 1000);
+											_timerQueue.AddTaskTimer(pl_id, -1, EV_RANDOM_MOVE, 1000);
 									}
 									continue;
 								}
@@ -754,7 +753,7 @@ void Server::WorkerThread()
 			break;
 		case OP_HEAL:
 			if (true == objects[key]->Heal())
-				_timerQueue.add_timer(key, -1, EV_HEAL, 5000);
+				_timerQueue.AddTaskTimer(key, -1, EV_HEAL, 5000);
 			else
 				objects[key]->SetHeal(false);
 
@@ -793,7 +792,7 @@ void Server::disconnect(int key)
 	swprintf(sql, 50, L"EXEC logout_user '%s', %d, %d, %d, %d, %d, %d", 
 		wStr.c_str(), pos.x, pos.y, 
 		logoutPlayer->GetLevel(), logoutPlayer->GetExp(), logoutPlayer->GetHp(), logoutPlayer->GetPower());
-	_dbQueue.add_exec(logoutPlayer, sql, EV_LOGOUT);
+	_dbQueue.addTaskExecDirect(logoutPlayer, sql, EV_LOGOUT);
 	logoutPlayer->SetName("\n");
 
 	for (auto& id : playerList) {		
@@ -886,7 +885,7 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 						bool input = false;
 						if (true == monster->CASIsActive(false, true))
 							if(monster->GetIsRoaming())
-									_timerQueue.add_timer(pl_id, -1, EV_RANDOM_MOVE, 1000);
+									_timerQueue.AddTaskTimer(pl_id, -1, EV_RANDOM_MOVE, 1000);
 					}
 				}
 			}

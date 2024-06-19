@@ -66,7 +66,6 @@ public:
 	Pos GetSpawnPos() { return _spawnPos; }
 	void SetPower(int power) { _power = power; }
 	int GetPower() { return _power; }
-	virtual int GetExpOnDeath() { return 0; }
 	void SetHeal(bool newHeal) { _isHeal = newHeal; }
 };
 

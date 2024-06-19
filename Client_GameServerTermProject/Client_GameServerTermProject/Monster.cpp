@@ -24,9 +24,6 @@ Monster::Monster(int visual)
 		break;
 	}
 
-	//_flipbookMove[DIR_DOWN] = GET_SINGLE(ResourceManager)->GetFlipbook(L"FB_SnakeMoveDown");
-	//_flipbookMove[DIR_LEFT] = GET_SINGLE(ResourceManager)->GetFlipbook(L"FB_SnakeMoveLeft");
-	//_flipbookMove[DIR_RIGHT] = GET_SINGLE(ResourceManager)->GetFlipbook(L"FB_SnakeMoveRight");
 	SetFlipbook(_flipbookMove[DIR_UP]);
 }
 
@@ -56,7 +53,6 @@ void Monster::Tick()
 	{
 		SetState(State::Idle);
 		_pos = _destPos;
-		//_keyPressed = false;
 	}
 	else {
 

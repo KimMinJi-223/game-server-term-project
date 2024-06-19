@@ -12,7 +12,7 @@
 
 struct DB_EVENT {
 	Session*	player;
-	wchar_t sqlArr[100]; // 명령문
+	wchar_t query[100]; // 명령문
 	EVENT_TYPE event_type; // 스위치 문에서호출할 함수 정하기
 };
 
@@ -21,24 +21,27 @@ class DB
 private:
 	HANDLE _hiocp;
 
-	SQLHSTMT hstmt;
-	SQLHENV henv;
-	SQLHDBC hdbc;
+	SQLHSTMT _hstmt;
+	SQLHENV _henv;
+	SQLHDBC _hdbc;
 	
-	concurrency::concurrent_queue<DB_EVENT> _db_queue;
+	concurrency::concurrent_queue<DB_EVENT> _dbTaskQueue;
 
-	void print_err(SQLHANDLE hHandle, SQLSMALLINT hType, RETCODE RetCode);
+private:
+	void printErr(SQLHANDLE hHandle, SQLSMALLINT hType, RETCODE RetCode);
 
 public:
 	void Init(HANDLE hiocp);
-	void do_db();
-	void add_exec(Session* player, const wchar_t* sql, EVENT_TYPE et);
+
+private:
+	void connect();
+	
+private:
+	void ExecDirect(DB_EXEC_TYPE exec, const wchar_t* sqlArr, Session* player);
+	bool fetchUserInfo(const wchar_t* sqlArr, Session* player);
 
 public:
-	bool ExecDirect(EXEC_TYPE exec, const wchar_t* sqlArr, Session* player);
-	void connect();
-	bool send_login(const wchar_t* sqlArr, Session* player);
-	void send_logout(const wchar_t* sqlArr, Session* player);
-	//void send_update();
+	void startDbThread();
+	void addTaskExecDirect(Session* player, const wchar_t* sql, EVENT_TYPE et);
 };
 
