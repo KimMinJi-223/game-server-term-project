@@ -26,20 +26,21 @@ public:
 	void Login(int x, int y, int hp, int level, int exp, int power);
 public:
 	// 네트워크
-	void do_recv();
-	void do_send(void* packet);
-	void send_login_info_packet(OBJECT_VISUAL visual);
-	void send_login_fail_packet();
-	void send_add_player_packet(Object& c_id, char c_visual);
-	void send_move_packet(Object& other, char dir);
-	void send_remove_player_packet(int c_id);
-	void send_exp_change_packet();
-	void send_hp_change_packet(int id, int hp);
-	void send_level_change_packet(int id, int level, int exp);
-	void send_respawn_packet();
+	void DoRecv();
+	void DoSend(void* packet);
+	void SendLoginInfoPacket(OBJECT_VISUAL visual);
+	void SendLoginFailPacket();
+	void SendAddPlayerPacket(Object& c_id, char c_visual);
+	void SendMovePacket(Object& other, char dir);
+	void SendRemovePlayerPacket(int c_id);
+	void SendExpChangePacket();
+	void SendHpChangePacket(int id, int hp);
+	void SendLevelChangePacket(int id, int level, int exp);
+	void SendRespawnPacket();
 
 public:
 	void GetRefViewList(std::unordered_set<int>& view);
+	void ClearViewList();
 	OVER_EXP* GetOverEXP() { return &_recv_over; }
 	SOCKET GetSocket() { return _socket; }
 	void SetName(const char* name) { strcpy_s(_name, NAME_SIZE, name); }

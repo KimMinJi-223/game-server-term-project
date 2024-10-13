@@ -2,7 +2,6 @@
 #include "Defines.h"
 #include "protocol.h"
 #include <mutex>
-
 class Object
 {
 protected:
@@ -38,7 +37,7 @@ public:
 	bool CASIsHeal(bool expect, bool update);
 
 public:
-	std::mutex& GetStateMutex() { return _s_lock; }
+	std::mutex& GetStateMutex() { return _s_lock;}
 	S_STATE GetState() { return _state; }
 	void SetState(S_STATE newState) { _state = newState; }
 

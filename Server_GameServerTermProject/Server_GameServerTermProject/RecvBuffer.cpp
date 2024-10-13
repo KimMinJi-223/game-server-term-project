@@ -2,7 +2,7 @@
 
 RecvBuffer::RecvBuffer()
 {
-	_recvBuff_front = 0;
-	_recvBuff_rear = 0;
-	_prev_remain = 0;
+	_front = 0;
+	_rear = 0;
+	_prevRemain = 0;
 }

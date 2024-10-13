@@ -24,7 +24,7 @@ void Session::Login(int x, int y, int hp, int level, int exp, int power)
 	_power = power;
 }
 
-void Session::do_recv()
+void Session::DoRecv()
 {
 	DWORD recv_flag = 0;
 	memset(&_recv_over._over, 0, sizeof(_recv_over._over));
@@ -35,13 +35,13 @@ void Session::do_recv()
 		&_recv_over._over, 0);
 }
 
-void Session::do_send(void* packet)
+void Session::DoSend(void* packet)
 {
 	OVER_EXP* sdata = new OVER_EXP{ reinterpret_cast<char*>(packet) };
 	WSASend(_socket, &sdata->_wsabuf, 1, 0, 0, &sdata->_over, 0);
 }
 
-void Session::send_login_info_packet(OBJECT_VISUAL visual)
+void Session::SendLoginInfoPacket(OBJECT_VISUAL visual)
 {
 	SC_LOGIN_INFO_PACKET p;
 	p.size = sizeof(SC_LOGIN_INFO_PACKET);
@@ -57,18 +57,18 @@ void Session::send_login_info_packet(OBJECT_VISUAL visual)
 	p.x = _pos.x;
 	p.y = _pos.y;
 	///////////////////////
-	do_send(&p);
+	DoSend(&p);
 }
 
-void Session::send_login_fail_packet()
+void Session::SendLoginFailPacket()
 {
 	SC_LOGIN_FAIL_PACKET p;
 	p.size = sizeof(SC_LOGIN_FAIL_PACKET);
 	p.type = SC_LOGIN_FAIL;
-	do_send(&p);
+	DoSend(&p);
 }
 
-void Session::send_add_player_packet(Object& other, char c_visual)
+void Session::SendAddPlayerPacket(Object& other, char c_visual)
 {
 	int c_id = other.GetId();
 	_vll.lock();
@@ -95,10 +95,10 @@ void Session::send_add_player_packet(Object& other, char c_visual)
 
 	strcpy_s(add_packet.name, other.GetName());
 
-	do_send(&add_packet);
+	DoSend(&add_packet);
 }
 
-void Session::send_move_packet(Object& other, char dir)
+void Session::SendMovePacket(Object& other, char dir)
 {
 	//printf("%d -> %d send_move_packet\n", other.GetId(), _id);
 	SC_MOVE_OBJECT_PACKET p;
@@ -112,10 +112,10 @@ void Session::send_move_packet(Object& other, char dir)
 	//p.direction = dir;
 	p.move_time = static_cast<Session*>(&other)->_last_move_time_stress_test;
 
-	do_send(&p);
+	DoSend(&p);
 }
 
-void Session::send_remove_player_packet(int c_id)
+void Session::SendRemovePlayerPacket(int c_id)
 {
 	_vll.lock();
 	if (0 == _view_list.count(c_id)) {
@@ -131,20 +131,20 @@ void Session::send_remove_player_packet(int c_id)
 	p.type = SC_REMOVE_OBJECT;
 	p.id = c_id;
 
-	do_send(&p);
+	DoSend(&p);
 }
 
-void Session::send_exp_change_packet()
+void Session::SendExpChangePacket()
 {
 	SC_EXP_CHANGE_PACKET p;
 	p.size = sizeof(p);
 	p.type = SC_EXP_CHANGE;
 	p.exp = _exp;
 
-	do_send(&p);
+	DoSend(&p);
 }
 
-void Session::send_hp_change_packet(int id, int hp)
+void Session::SendHpChangePacket(int id, int hp)
 {
 	SC_HP_CHANGE_PACKET p;
 	p.size = sizeof(SC_HP_CHANGE_PACKET);
@@ -152,10 +152,10 @@ void Session::send_hp_change_packet(int id, int hp)
 	p.id = id;
 	p.hp = hp;
 
-	do_send(&p);
+	DoSend(&p);
 }
 
-void Session::send_level_change_packet(int id, int level, int exp)
+void Session::SendLevelChangePacket(int id, int level, int exp)
 {
 	SC_LEVEL_CHANGE_PACKET p;
 	p.size = sizeof(SC_LEVEL_CHANGE_PACKET);
@@ -164,10 +164,10 @@ void Session::send_level_change_packet(int id, int level, int exp)
 	p.level = level;
 	p.exp = exp;
 
-	do_send(&p);
+	DoSend(&p);
 }
 
-void Session::send_respawn_packet()
+void Session::SendRespawnPacket()
 {
 	SC_RESPAWN_PACKET p;
 	p.size = sizeof(SC_RESPAWN_PACKET);
@@ -178,7 +178,7 @@ void Session::send_respawn_packet()
 	p.hp = _hp;
 	p.exp = _exp;
 
-	do_send(&p);
+	DoSend(&p);
 }
 
 void Session::GetRefViewList(std::unordered_set<int>& view)
@@ -186,6 +186,12 @@ void Session::GetRefViewList(std::unordered_set<int>& view)
 	_vll.lock();
 	view = _view_list;
 	_vll.unlock();
+}
 
+void Session::ClearViewList()
+{
+	_vll.lock();
+	_view_list.clear();
+	_vll.unlock();
 }
 

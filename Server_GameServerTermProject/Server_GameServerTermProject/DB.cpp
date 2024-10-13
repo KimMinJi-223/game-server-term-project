@@ -161,11 +161,11 @@ void DB::startDbThread()
 	}
 }
 
-void DB::addTaskExecDirect(Session* player, const wchar_t* sql, EVENT_TYPE et)
+void DB::addTaskExecDirect(Session* player, const wchar_t* sqlQuery, EVENT_TYPE et)
 {
 	DB_EVENT ev;
 	ev.player = player;
-	wcsncpy_s(ev.query, sql, 100);
+	wcsncpy_s(ev.query, sqlQuery, 100);
 	ev.event_type = et;
 	_dbTaskQueue.push(ev);
 }

@@ -35,12 +35,12 @@ void Timer::startTimerThread()
 				PostQueuedCompletionStatus(_hiocp, 1, ev.id, &ov->_over);
 				break;
 			case EV_AI_MOVE:
-				ov->_comp_type = OP_AI_MOVE;
+				ov->_comp_type = OP_ASTAR_MOVE;
 				ov->_cause_player_id = ev.targetId;
 				PostQueuedCompletionStatus(_hiocp, 1, ev.id, &ov->_over);
 				break;
 			case EV_AI_LUA:
-				ov->_comp_type = OP_AI_LUA;
+				ov->_comp_type = OP_CAN_ASTAR;
 				ov->_cause_player_id = ev.targetId;
 				PostQueuedCompletionStatus(_hiocp, 1, ev.id, &ov->_over);
 				break;

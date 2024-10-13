@@ -53,20 +53,31 @@ public:
 	void process_packet(int id, char* packet);
 	void WorkerThread();
 	void disconnect(int key);
-	void BroadCastChat(int id, char* packet);
-
+	
 	void process_move(Session* movePlayer, int id, char direction);
 	void GetNearPlayersList(int id, std::unordered_set<int>& list);
 	int SetSectorId(Object& obj, int id, int x, int y);
+
+private:
+	bool processLoginRequest(int id, char* packet);
+	void processMoveRequest(int id, char* packet);
+	void BroadCastChat(int id, char* packet);
+	void processAttackRequest(int id, char* packet);
+	void processSkillRequest(int id, char* packet); 
+
+private:
+	void SpawnPlayer(int key, int sectorId);
+	void SpawnMonster(int key);
 
 public:
 	void AStar(int& x, int& y, int id);
 	int FindAttackedMonster(int id);
 	bool FindASkillMonster(int id, int* ids);
+
 public:
-	int get_new_client_id();
-	bool can_see(int a, int b);
-	bool can_go(int x, int y);
+	int GetNewClientId();
+	bool CanSee(int a, int b);
+	bool CanGo(int x, int y);
 	Timer* GetTImer() { return &_timerQueue; }
 	DB* GetDB() { return &_dbQueue; }
 

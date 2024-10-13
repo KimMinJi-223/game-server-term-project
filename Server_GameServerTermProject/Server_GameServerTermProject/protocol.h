@@ -5,13 +5,14 @@ constexpr int CHAT_SIZE = 300;
 
 constexpr int MAX_USER = 18000;
 constexpr int NUM_NPC = 200000;
-//constexpr int NUM_NPC = 120000;
+//constexpr int NUM_NPC = 20000;
 constexpr int NUM_NPC_1 = MAX_USER + 50000;
 constexpr int NUM_NPC_2 = NUM_NPC_1 + 50000;
 constexpr int NUM_NPC_3 = NUM_NPC_2 + 50000;
 constexpr int NUM_NPC_4 = NUM_NPC_3 + 50000;
 
 constexpr int BUF_SIZE = 1024;
+constexpr int BUF_INDEX_LIMIT = BUF_SIZE - 350;
 constexpr int MAX_PACKET_SIZE = 350;
 
 constexpr int W_WIDTH = 2000;
@@ -58,8 +59,8 @@ struct CS_LOGIN_PACKET {
 struct CS_MOVE_PACKET {
 	unsigned short size;
 	char	type;
-	char	direction;  // 0 : UP, 1 : DOWN, 2 : LEFT, 3 : RIGHT
-	unsigned	move_time;
+	char	direction;            // 0 : UP, 1 : DOWN, 2 : LEFT, 3 : RIGHT
+	unsigned	moveTime;
 };
 
 

@@ -11,6 +11,7 @@ void Object::Init(int x, int y, int id, const char* name)
 	_level = rand() % 10 + 1;
 	_hp = DEFALUT_MAX_HP * _level;
 	_maxHp = _hp;
+	_power = 10;
 	strcpy_s(_name, name);
 }
 

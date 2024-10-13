@@ -2,33 +2,24 @@
 #include "Server.h"
 #include <iostream>
 
-void Monster::init(int id, int x, int y)
+void Monster::Init(int id, int x, int y)
 {
 	if((id - MAX_USER) % 10000 == 0)
 		printf("%d ¸¶¸®\n", id - MAX_USER);
 	
-	if (id < NUM_NPC_1) {
-		_monsterType = VI_MONSTER_1;
-		_isAgro = false;
-		_isRoaming = false;
-		_roamingArea = 0;
-		_power = 10;
-	}
-	else if (id < NUM_NPC_2) {
-		_monsterType = VI_MONSTER_2;
-		_isAgro = false;
-		_isRoaming = true;
-		_roamingArea = 10;
-		_power = 10;
+	if (id < NUM_NPC_1) 
+		SetMonsterType(VI_MONSTER_1);
+	else if (id < NUM_NPC_2)
+		SetMonsterType(VI_MONSTER_2);
+	else if (id < NUM_NPC_3)
+		SetMonsterType(VI_MONSTER_3);
+	else if (id < NUM_NPC_4)
+		SetMonsterType(VI_MONSTER_4);
+	else 
+		SetMonsterType(VI_MONSTER_4);
 
-	}
-	else if (id < NUM_NPC_3) {
-		_monsterType = VI_MONSTER_3;
-		_isAgro = true;
-		_isRoaming = false;
-		_roamingArea = 0;
-		_power = 10;
 
+	if (_monsterType == VI_MONSTER_3 || _monsterType == VI_MONSTER_4) {
 		_L = luaL_newstate();
 		luaL_openlibs(_L);
 		luaL_loadfile(_L, "monster.lua");
@@ -47,57 +38,6 @@ void Monster::init(int id, int x, int y)
 		lua_pushnumber(_L, _monsterType);
 		lua_pcall(_L, 4, 0, 0);
 	}
-	else if (id < NUM_NPC_4) {
-		_monsterType = VI_MONSTER_4;
-		_isAgro = true;
-		_isRoaming = true;
-		_roamingArea = 10;
-		_power = 10;
-
-		_L = luaL_newstate();
-		luaL_openlibs(_L);
-		luaL_loadfile(_L, "monster.lua");
-		lua_pcall(_L, 0, 0, 0);
-
-		lua_register(_L, "API_GetPosX", Server::API_GetPosX);
-		lua_register(_L, "API_GetPosY", Server::API_GetPosY);
-		lua_register(_L, "API_AStarStart", Server::API_AStarStart);
-		lua_register(_L, "API_AStarEnd", Server::API_AStarEnd);
-		lua_register(_L, "API_AddTimer", Server::API_AddTimer);
-
-		lua_getglobal(_L, "set_init");
-		lua_pushnumber(_L, id);
-		lua_pushnumber(_L, x);
-		lua_pushnumber(_L, y);
-		lua_pushnumber(_L, _monsterType);
-		lua_pcall(_L, 4, 0, 0);
-	}
-	else  {
-		_monsterType = VI_MONSTER_4;
-		_isAgro = true;
-		_isRoaming = true;
-		_roamingArea = 10;
-		_power = 10;
-
-		_L = luaL_newstate();
-		luaL_openlibs(_L);
-		luaL_loadfile(_L, "monster.lua");
-		lua_pcall(_L, 0, 0, 0);
-
-		lua_register(_L, "API_GetPosX", Server::API_GetPosX);
-		lua_register(_L, "API_GetPosY", Server::API_GetPosY);
-		lua_register(_L, "API_AStarStart", Server::API_AStarStart);
-		lua_register(_L, "API_AStarEnd", Server::API_AStarEnd);
-		lua_register(_L, "API_AddTimer", Server::API_AddTimer);
-
-		lua_getglobal(_L, "set_init");
-		lua_pushnumber(_L, id);
-		lua_pushnumber(_L, x);
-		lua_pushnumber(_L, y);
-		lua_pushnumber(_L, _monsterType);
-		lua_pcall(_L, 4, 0, 0);
-	}
-
 	
 	char name[NAME_SIZE];
 	sprintf_s(name, "M%d", id);
@@ -111,7 +51,6 @@ void Monster::move(int& x, int& y)
 	if (!_isAiMove) 
 		Server::GetInstance()->GetTImer()->AddTaskTimer(_id,-1, EV_RANDOM_MOVE, 1000);
 	
-
 	while (true) {
 		x = _pos.x;
 		y = _pos.y;
@@ -127,7 +66,7 @@ void Monster::move(int& x, int& y)
 		if ((_spawnPos.y - y) * (_spawnPos.y - y) > _roamingArea * _roamingArea)
 			continue;
 
-		if (!(Server::GetInstance()->can_go(x, y))) {
+		if (!(Server::GetInstance()->CanGo(x, y))) {
 			continue;;
 		}
 		break;
@@ -151,6 +90,23 @@ int Monster::GetExpOnDeath()
 	return exp;
 }
 
+void Monster::SetMonsterType(int type) {
+	_monsterType = type;
+	if (type == VI_MONSTER_3 || type == VI_MONSTER_4)
+		_isAgro = true;
+	else
+		_isAgro = false;
+
+	if (type == VI_MONSTER_2 || type == VI_MONSTER_4) {
+		_roamingArea = 10;
+		_isRoaming = true;
+	}
+	else {
+		_roamingArea = 0;
+		_isRoaming = false;
+	}
+}
+
 void Monster::isDoAStar(int causeId, int x, int y)
 {
 	luaLock.lock();
@@ -166,5 +122,4 @@ void Monster::isDoAStar(int causeId, int x, int y)
 		return;
 	}
 	luaLock.unlock();
-
 }

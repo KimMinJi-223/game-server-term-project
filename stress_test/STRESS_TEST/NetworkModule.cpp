@@ -360,7 +360,7 @@ void Test_Thread()
 			case 2: my_packet.direction = 2; break;
 			case 3: my_packet.direction = 3; break;
 			}
-			my_packet.move_time = static_cast<unsigned>(duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count());
+			my_packet.moveTime = static_cast<unsigned>(duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count());
 			SendPacket(i, &my_packet);
 		}
 	}

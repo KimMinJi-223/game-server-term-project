@@ -2,7 +2,7 @@
 #include "object.h"
 #include <mutex>
 #include "include/lua.hpp"
-
+#include <iostream>
 #pragma comment(lib, "lua54.lib")
 
 class Monster : public Object
@@ -19,7 +19,7 @@ private:
 	int _targetId;
 
 public:
-	void init(int id, int x, int y);
+	void Init(int id, int x, int y);
 	void move(int& x, int& y);
 	void isDoAStar(int causeId, int x, int y);
 
@@ -34,11 +34,13 @@ public:
 	void SetTarget(int target) { _targetId = target; }
 	int GerTarget() { return _targetId; }
 
-	void SetMonsterType(char type) { _monsterType = type; }
 	int GetMonsterType() { return _monsterType; }
 
 	bool GetIsRoaming() { return _isRoaming; }
 	bool GetIsAgro() { return _isAgro; }
 
 	int GetExpOnDeath();
+
+private:
+	void SetMonsterType(int type);
 };

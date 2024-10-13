@@ -8,8 +8,7 @@ enum S_STATE {
 	ST_FREE, ST_ALLOC, ST_INGAME 
 };
 enum COMP_TYPE { 
-	OP_ACCEPT, OP_RECV, OP_SEND, OP_NPC_MOVE, OP_AI_MOVE, OP_AI_LUA, OP_NPC_ATTACK, OP_RESPAWN, OP_HEAL,
-	OP_LOGIN
+	OP_ACCEPT, OP_LOGIN, OP_RECV, OP_SEND, OP_NPC_MOVE, OP_ASTAR_MOVE, OP_CAN_ASTAR, OP_NPC_ATTACK, OP_RESPAWN, OP_HEAL
 };
 enum DB_EXEC_TYPE { 
 	LOGINT, LOGOUT 
@@ -27,9 +26,10 @@ constexpr int VIEW_RANGE = 7;
 
 constexpr int SECTOR_SIZE = 10;
 constexpr int SECTOR_COUNT = (W_WIDTH / SECTOR_SIZE) * (W_HEIGHT / SECTOR_SIZE);
-constexpr int ADJ_COUNT = 9;
+constexpr int NUM_ADJACENT_SECTORS = 9;
 constexpr int MULTIPLY_ROW = (SECTOR_COUNT / W_WIDTH * SECTOR_SIZE);
-constexpr int adj_sector[9]{
+
+constexpr int adjacentSectors[9]{
 	0,
 	-(W_WIDTH / SECTOR_SIZE) - 1,
 	-(W_WIDTH / SECTOR_SIZE),

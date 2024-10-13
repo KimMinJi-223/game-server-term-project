@@ -36,7 +36,7 @@ function isDoAStar(playerId, x, y)
         end
         -- 타겟 활성화
         API_AStarStart(myid, playerId);
-        -- 1 : A스타 이동
+        -- A스타 이동
         API_AddTimer(myid, playerId, 1,  1000);
         target = playerId;
         return

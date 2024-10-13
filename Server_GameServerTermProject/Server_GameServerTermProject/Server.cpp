@@ -40,7 +40,7 @@ void Server::Init()
 	_client_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 	_accept_over._comp_type = OP_ACCEPT;
 	AcceptEx(_listen_socket, _client_socket, _accept_over._buff.GetBuff(), 0, addr_size + 16, addr_size + 16, 0, &_accept_over._over);
-	
+
 	_timerQueue.Init(_hiocp);
 	_dbQueue.Init(_hiocp);
 
@@ -61,11 +61,11 @@ void Server::initialize_npc()
 		while (true) {
 			x = rand() % W_WIDTH;
 			y = rand() % W_HEIGHT;
-			if (can_go(x, y))
+			if (CanGo(x, y))
 				break;
 		}
 
-		monster->init(npc_id, x, y);
+		monster->Init(npc_id, x, y);
 
 		int sectorId = (x / SECTOR_SIZE) + ((y / SECTOR_SIZE) * MULTIPLY_ROW);
 		objects[npc_id]->SetSectorId(sectorId);
@@ -94,7 +94,7 @@ void Server::LoadCollision(const char* fileName)
 		{
 			for (int i = 0; i < 50; ++i) {
 				for (int j = 0; j < 50; ++j) {
-					_collision[y + i*40][x + j * 40] = line[x] - L'0';
+					_collision[y + i * 40][x + j * 40] = line[x] - L'0';
 				}
 			}
 		}
@@ -103,7 +103,7 @@ void Server::LoadCollision(const char* fileName)
 	ifs.close();
 }
 
-bool Server::can_see(int objectID_1, int objectID_2)
+bool Server::CanSee(int objectID_1, int objectID_2)
 {
 	Pos pos1 = objects[objectID_1]->GetPosition();
 	Pos pos2 = objects[objectID_2]->GetPosition();
@@ -112,7 +112,7 @@ bool Server::can_see(int objectID_1, int objectID_2)
 	return abs(pos1.y - pos2.y) <= VIEW_RANGE;
 }
 
-bool Server::can_go(int x, int y)
+bool Server::CanGo(int x, int y)
 {
 	return _collision[y][x] != 1;
 }
@@ -153,13 +153,13 @@ int Server::API_AStarEnd(lua_State* L)
 	lua_pop(L, 2);
 	Monster* monster = reinterpret_cast<Monster*>(Server::GetInstance()->objects[monsterId]);
 
-	if(monster->GetIsRoaming())
+	if (monster->GetIsRoaming())
 		Server::GetInstance()->GetTImer()->AddTaskTimer(monsterId, monsterId, EV_RANDOM_MOVE, 1000);
 
 	monster->SetISAIMove(false);
 	monster->SetTarget(-1);
 	Pos pos = monster->GetPosition();
-	if(pos.x >= 0 && pos.y >= 0)
+	if (pos.x >= 0 && pos.y >= 0)
 		monster->SetSpawnPos(pos);
 
 	return 0;
@@ -184,169 +184,25 @@ void Server::process_packet(int id, char* packet)
 {
 	switch (packet[2]) {
 	case CS_LOGIN: {
-		//std::cout << "로그인\n";
-		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
-		Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
-
-		for (auto player: objects) {
-			char* name = player->GetName();
-			if (strncmp(p->name, name, strlen(p->name) + 1) == 0) {
-				std::cout << "LOGIN FAIL : 이미 로그인\n";
-				loginPlayer->send_login_fail_packet();
-				return;
-			}
-			
-		}
-		objects[id]->SetName(p->name);
-		wchar_t sql[50];
-		std::wstring wStr = converter.from_bytes(p->name);
-		swprintf(sql, 50, L"EXEC select_user '%s'", wStr.c_str());
-		_dbQueue.addTaskExecDirect(reinterpret_cast<Session*>(objects[id]), sql, EV_LOGIN);
-
-
+		processLoginRequest(id, packet);
 		break;
 	}
 	case CS_MOVE: {
-		//std::cout << "CS_MOVE" << std::endl;
-		CS_MOVE_PACKET* p = reinterpret_cast<CS_MOVE_PACKET*>(packet);
-
-		Session* movePlayer = reinterpret_cast<Session*>(objects[id]);
-		if (std::chrono::system_clock::now() < movePlayer->_last_move_time + std::chrono::milliseconds(MOVE_RATE))
-			break;
-		
-		movePlayer->_last_move_time = std::chrono::system_clock::now();
-
-		movePlayer->_last_move_time_stress_test = p->move_time;
-		process_move(movePlayer, id, p->direction);
+		processMoveRequest(id, packet);
 		break;
 	}
 	case CS_CHAT: {
 		CS_CHAT_PACKET* p = reinterpret_cast<CS_CHAT_PACKET*>(packet);
-		//std::cout << p->mess;
 		BroadCastChat(id, p->mess);
 		break;
 	}
 	case CS_ATTACK: {
-		Session* player = reinterpret_cast<Session*>(objects[id]);
-		if (std::chrono::system_clock::now() < player->_last_attak_time + std::chrono::milliseconds(ATTACK_RATE))
-			break;
-		player->_last_attak_time = std::chrono::system_clock::now();
-
-		int AttackedId = FindAttackedMonster(id);
-		if (AttackedId == -1)
-			break;
-		Monster* target = reinterpret_cast<Monster*>(objects[AttackedId]);
-
-		int damage = objects[id]->GetPower();
-		bool isSuccess = false;;
-		int remainingHp = target->Damage(damage, isSuccess);
-		if (isSuccess) {
-			// 공격성공
-			std::unordered_set<int> PlayerList;
-			GetNearPlayersList(AttackedId, PlayerList);
-
-			if (remainingHp != 0) {
-				// 죽은건 아니면 체력을 수정
-
-				for (auto id : PlayerList) {
-					Session* Players = reinterpret_cast<Session*>(objects[id]);
-					Players->send_hp_change_packet(AttackedId, target->GetHp());
-				}
-			}
-			else {
-				// 몬스터 죽음 부활
-				_timerQueue.AddTaskTimer(AttackedId, -1, EV_RESPAWN, 30000);
-				// 죽인 플레이어의 경험치 설정
-				if (objects[id]->SetAddExp(target->GetExpOnDeath())) {
-					player->send_level_change_packet(id, player->GetLevel(), player->GetExp());
-					
-					// 레벨업 뷰리스트에 있는 플레이어에게 보내기
-					std::unordered_set<int> nearPlayer;
-					player->GetRefViewList(nearPlayer);
-					for (auto playerId : nearPlayer) {
-						Session* otherPlayer = reinterpret_cast<Session*>(objects[playerId]);
-						otherPlayer->send_level_change_packet(id, player->GetLevel(), player->GetExp());
-					}
-
-				}
-				else {
-					// 경험치만 올리기
-					player->send_exp_change_packet();
-				}
-
-				// 모든 플레이어에게 remove보내기
-				target->SetPosition(-100, -100);
-				for (auto id : PlayerList) {
-					Session* Players = reinterpret_cast<Session*>(objects[id]);
-					Players->send_remove_player_packet(AttackedId);
-				}
-			}
-			
-		}
+		processAttackRequest(id, packet);
 
 		break;
 	}
 	case CS_A_SKILL: {
-		int findIds[4]{ -1, -1, -1, -1 };
-		bool isSuccess = FindASkillMonster(id, findIds);
-		if (isSuccess == -1)
-			break;
-
-		for (int i = 0; i < 4; ++i) {
-			if (findIds[i] == -1)
-				continue;
-
-			Session* player = reinterpret_cast<Session*>(objects[id]);
-
-			int damage = objects[id]->GetPower();
-			isSuccess = false;;
-			int remainingHp = objects[findIds[i]]->Damage(damage, isSuccess);
-			if (isSuccess) {
-				// 공격성공
-				std::unordered_set<int> PlayerList;
-				GetNearPlayersList(findIds[i], PlayerList);
-
-				if (remainingHp != 0) {
-					// 죽은건 아니면 체력을 수정
-
-					for (auto id : PlayerList) {
-						Session* Players = reinterpret_cast<Session*>(objects[id]);
-						Players->send_hp_change_packet(findIds[i], objects[findIds[i]]->GetHp());
-					}
-				}
-				else {
-					// 몬스터 죽음 부활S
-					Monster* target = reinterpret_cast<Monster*>(objects[findIds[i]]);
-
-					_timerQueue.AddTaskTimer(findIds[i], -1, EV_RESPAWN, 30000);
-					// 죽인 플레이어의 경험치 설정
-					if (objects[id]->SetAddExp(target->GetExpOnDeath())) {
-						player->send_level_change_packet(id, player->GetLevel(), player->GetExp());
-
-						// 레벨업 뷰리스트에 있는 플레이어에게 보내기
-						std::unordered_set<int> nearPlayer;
-						player->GetRefViewList(nearPlayer);
-						for (auto playerId : nearPlayer) {
-							Session* otherPlayer = reinterpret_cast<Session*>(objects[playerId]);
-							otherPlayer->send_level_change_packet(id, player->GetLevel(), player->GetExp());
-						}
-
-					}
-					else {
-						// 경험치만 올리기
-						player->send_exp_change_packet();
-					}
-
-					// 모든 플레이어에게 remove보내기
-					objects[findIds[i]]->SetPosition(-100, -100);
-					for (auto id : PlayerList) {
-						Session* Players = reinterpret_cast<Session*>(objects[id]);
-						Players->send_remove_player_packet(findIds[i]);
-					}
-				}
-
-			}
-		}
+		processSkillRequest(id, packet);
 		break;
 	}
 	default:
@@ -359,23 +215,23 @@ void Server::process_packet(int id, char* packet)
 void Server::WorkerThread()
 {
 	while (true) {
-		DWORD num_bytes;
+		DWORD numBytes;
 		ULONG_PTR key;
 		WSAOVERLAPPED* over = nullptr;
-		BOOL ret = GetQueuedCompletionStatus(_hiocp, &num_bytes, &key, &over, INFINITE);
+		BOOL ret = GetQueuedCompletionStatus(_hiocp, &numBytes, &key, &over, INFINITE);
 		OVER_EXP* ex_over = reinterpret_cast<OVER_EXP*>(over);
 		if (FALSE == ret) {
-			if (ex_over->_comp_type == OP_ACCEPT) 
+			if (ex_over->_comp_type == OP_ACCEPT)
 				std::cout << "Accept Error";
 			else {
-				std::cout << "GQCS Error on client[" << key << "]\n";
+				//std::cout << "GQCS Error on client[" << key << "]\n";
 				disconnect(static_cast<int>(key));
 				if (ex_over->_comp_type == OP_SEND) delete ex_over;
 				continue;
 			}
 		}
 
-		if ((0 == num_bytes) && ((ex_over->_comp_type == OP_RECV) || (ex_over->_comp_type == OP_SEND))) {
+		if ((0 == numBytes) && ((ex_over->_comp_type == OP_RECV) || (ex_over->_comp_type == OP_SEND))) {
 			disconnect(static_cast<int>(key));
 			if (ex_over->_comp_type == OP_SEND) delete ex_over;
 			continue;
@@ -383,8 +239,7 @@ void Server::WorkerThread()
 
 		switch (ex_over->_comp_type) {
 		case OP_ACCEPT: {
-			int client_id = get_new_client_id();
-			//std::cout << "아이디 할당 : " << client_id << std::endl;
+			int client_id = GetNewClientId();
 			if (client_id != -1) {
 				{
 					std::lock_guard<std::mutex> ll(objects[client_id]->GetStateMutex());
@@ -393,7 +248,7 @@ void Server::WorkerThread()
 				Session* newPlayer = reinterpret_cast<Session*>(objects[client_id]);
 				newPlayer->Init(0, 0, client_id, "", _client_socket);
 				CreateIoCompletionPort(reinterpret_cast<HANDLE>(_client_socket), _hiocp, client_id, 0);
-				newPlayer->do_recv();
+				newPlayer->DoRecv();
 				_client_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 			}
 			else {
@@ -404,49 +259,13 @@ void Server::WorkerThread()
 			AcceptEx(_listen_socket, _client_socket, _accept_over._buff.GetBuff(), 0, addr_size + 16, addr_size + 16, 0, &_accept_over._over);
 			break;
 		}
-		case OP_RECV: {
-			Session* player = reinterpret_cast<Session*>(objects[key]);
-			RecvBuffer* recvBuff = &(player->GetOverEXP()->_buff);
-			int remain_data = num_bytes + recvBuff->GetPrevRemain();
-			int frontIndex = recvBuff->GetRecvBuffFrontIndex();
-			char* p = recvBuff->GetBuff(frontIndex);
-			while (remain_data > 0) {
-				unsigned short packet_size = *reinterpret_cast<unsigned short*>(p);
-				if (packet_size <= remain_data) {
-					process_packet(static_cast<int>(key), p);
-					p = p + packet_size;
-					remain_data = remain_data - packet_size;
-				}
-				else break;
-			}
-
-			recvBuff->SetPrevRemain(remain_data);
-			recvBuff->SetAddRecvBuffRearIndex(num_bytes);
-			recvBuff->SetAddRecvBuffForntIndex(num_bytes);
-			if (remain_data > 0) { // 만족하면 rear와 front가 같지 않음
-				if ((recvBuff->GetRecvBuffRearIndex()) == BUF_SIZE) {
-					memcpy(recvBuff->GetBuff(), p, remain_data);
-					recvBuff->SetRecvBuffForntIndex(0);
-					recvBuff->SetRecvBuffRearIndex(remain_data);
-				}
-			}
-			else { // rear와 front가 같다. 0으로 위치를 옮긴다. 
-				recvBuff->SetRecvBuffForntIndex(0);
-				recvBuff->SetRecvBuffRearIndex(0);
-			}
-			player->do_recv();
-			break;
-		}
-		case OP_SEND:
-			delete ex_over;
-			break;
 		case OP_LOGIN:
 		{
 			Session* player = reinterpret_cast<Session*>(objects[key]);
 			Pos pos = player->GetPosition();
 
 			while (true) {
-				if (can_go(pos.x, pos.y)) {
+				if (CanGo(pos.x, pos.y)) {
 					break;
 				}
 				pos.x = rand() % W_WIDTH;
@@ -457,76 +276,69 @@ void Server::WorkerThread()
 			player->SetPosition(pos.x, pos.y);
 
 			//std::cout << pos.x << " " << pos.y << std::endl;
- 			int sectorId = (pos.x / SECTOR_SIZE) + ((pos.y / SECTOR_SIZE) * MULTIPLY_ROW);
-			sectors[sectorId].AddPlayerList(key);
 
-			player->send_login_info_packet(VI_PLAYER);
+			player->SendLoginInfoPacket(VI_PLAYER);
+
+			int sectorId = (pos.x / SECTOR_SIZE) + ((pos.y / SECTOR_SIZE) * MULTIPLY_ROW);
+			sectors[sectorId].AddPlayerList(key);
 
 			{
 				std::lock_guard<std::mutex> ll{ player->GetStateMutex() };
 				player->SetState(ST_INGAME);
 			}
 
-			std::unordered_set<int> playerList;
-			int adj_index = 0;
-
-			for (int i = 0; i < ADJ_COUNT; ++i) {
-				adj_index = sectorId - adj_sector[i];
-				if (adj_index < 0 || adj_index > SECTOR_COUNT - 1)
-					continue;
-
-				sectors[adj_index].GetPlayerList(playerList);
-
-				for (auto& pl_id : playerList) {
-					Object& cl = *(objects[pl_id]);
-					{
-						std::lock_guard<std::mutex> ll(cl.GetStateMutex());
-						if (ST_INGAME != cl.GetState()) continue;
-					}
-					if (pl_id == key)
-						continue;
-					if (true == can_see(pl_id, key)) {
-						if (true == cl.GetIsNpc()) {
-							Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
-
-							if (monster->GetIsAgro()) {
-								if (!monster->GetISAIMove()) {
-									OVER_EXP* exover = new OVER_EXP;
-									exover->_comp_type = OP_AI_LUA; // 이거는 어그로와 공격 그쪽으로 변경
-									exover->_cause_player_id = key;
-									PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
-								}
-							}
-
-							player->send_add_player_packet(cl, monster->GetMonsterType());
-
-							if (false == monster->GetIsActive()) {
-								if (true == monster->CASIsActive(false, true)) {
-									// 타이머가 호출되고 로밍 몬스터의 경우 영역에서 움직이는거를 루아가 계산한다. 
-									if (monster->GetIsRoaming())
-										_timerQueue.AddTaskTimer(pl_id, -1, EV_RANDOM_MOVE, 1000);
-								}
-								continue;
-							}
-							else {
-								player->send_add_player_packet(cl, monster->GetMonsterType());
-							}
-						}
-						else {
-							player->send_add_player_packet(cl, VI_PLAYER);
-							reinterpret_cast<Session*>(&cl)->send_add_player_packet(*player, VI_PLAYER);
-						}
-					}
-				}
-			}
+			SpawnPlayer(key, sectorId);
 
 			if (player->GetHp() < player->GetMaxHp()) {
-				if(player->CASIsHeal(false, true))
+				if (player->CASIsHeal(false, true))
 					_timerQueue.AddTaskTimer(key, -1, EV_HEAL, 5000);
 			}
 		}
 		delete ex_over;
 		break;
+		case OP_RECV: {
+			Session* player = reinterpret_cast<Session*>(objects[key]);
+			RecvBuffer* recvBuff = &(player->GetOverEXP()->_buff);
+			int remainData = numBytes + recvBuff->GetPrevRemain();
+			int frontIndex = recvBuff->GetFrontIndex();
+			char* p = recvBuff->GetBuff(frontIndex);
+			int processDate = 0;
+
+			while (remainData > 0) {
+				unsigned short packetSize = *reinterpret_cast<unsigned short*>(p);
+				if (packetSize <= remainData) {
+					process_packet(static_cast<int>(key), p);
+					p = p + packetSize;
+					remainData = remainData - packetSize;
+					processDate += packetSize;
+				}
+				else break;
+			}
+
+			recvBuff->SetPrevRemain(remainData);
+			
+			if (remainData > 0) {
+				if ((recvBuff->GetRecvBuffRearIndex()) >= BUF_INDEX_LIMIT) {
+					memcpy(recvBuff->GetBuff(), p, remainData);
+					recvBuff->SetFrontIndex(0);
+					recvBuff->SetRecvBuffRearIndex(remainData);
+				}
+				else {
+					recvBuff->SetAddFrontIndex(processDate);
+					recvBuff->SetAddRecvBuffRearIndex(numBytes);
+				}
+			}
+			else { 
+				recvBuff->SetFrontIndex(0);
+				recvBuff->SetRecvBuffRearIndex(0);
+			}
+			player->DoRecv();
+		}
+			break;
+
+		case OP_SEND:
+			delete ex_over;
+			break;
 		case OP_NPC_MOVE: {
 			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
 			delete ex_over;
@@ -545,9 +357,9 @@ void Server::WorkerThread()
 
 			int x = 0;
 			int y = 0;
-			
+
 			monster->move(x, y);
-			
+
 			int sectorId = SetSectorId(*monster, key, x, y);
 
 			std::unordered_set<int> newPlayerList;
@@ -556,21 +368,21 @@ void Server::WorkerThread()
 			for (auto& cl : newPlayerList) {
 				Session* addPlayer = reinterpret_cast<Session*>(objects[cl]);
 				if (0 == prevPlayerList.count(cl)) {
-					addPlayer->send_add_player_packet(*(objects[key]), monster->GetMonsterType());
+					addPlayer->SendAddPlayerPacket(*(objects[key]), monster->GetMonsterType());
 				}
 				else {
-					addPlayer->send_move_packet(*(objects[key]), objects[key]->GetDir());
+					addPlayer->SendMovePacket(*(objects[key]), objects[key]->GetDir());
 				}
 			}
 			for (auto& cl : prevPlayerList) {
 				if (0 == newPlayerList.count(cl)) {
 					Session* removePlayer = reinterpret_cast<Session*>(objects[cl]);
-					removePlayer->send_remove_player_packet(key);
+					removePlayer->SendRemovePlayerPacket(key);
 				}
 			}
 			break;
 		}
-		case OP_AI_MOVE: {
+		case OP_ASTAR_MOVE: {
 			delete ex_over;
 			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
 			if (!monster->GetISAIMove()) {
@@ -598,21 +410,21 @@ void Server::WorkerThread()
 			for (auto& cl : newPlayerList) {
 				Session* addPlayer = reinterpret_cast<Session*>(objects[cl]);
 				if (0 == prevPlayerList.count(cl)) {
-					addPlayer->send_add_player_packet(*(objects[key]), monster->GetMonsterType());
+					addPlayer->SendAddPlayerPacket(*(objects[key]), monster->GetMonsterType());
 				}
 				else {
-					addPlayer->send_move_packet(*(objects[key]), objects[key]->GetDir());
+					addPlayer->SendMovePacket(*(objects[key]), objects[key]->GetDir());
 				}
 			}
 			for (auto& cl : prevPlayerList) {
 				if (0 == newPlayerList.count(cl)) {
 					Session* removePlayer = reinterpret_cast<Session*>(objects[cl]);
-					removePlayer->send_remove_player_packet(key);
+					removePlayer->SendRemovePlayerPacket(key);
 				}
 			}
 			break;
 		}
-		case OP_AI_LUA: {
+		case OP_CAN_ASTAR: {
 			Monster* monster = reinterpret_cast<Monster*>(objects[key]);
 			Pos causePos = objects[ex_over->_cause_player_id]->GetPosition();
 			monster->isDoAStar(ex_over->_cause_player_id, causePos.x, causePos.y);
@@ -630,14 +442,14 @@ void Server::WorkerThread()
 				// 공격성공
 				std::unordered_set<int> PlayerList;
 				player->GetRefViewList(PlayerList);
-				if(player->CASIsHeal(false, true)) 
+				if (player->CASIsHeal(false, true))
 					_timerQueue.AddTaskTimer(AttackedId, -1, EV_HEAL, 5000);
 				if (remainingHp != 0) {
-					player->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
+					player->SendHpChangePacket(AttackedId, objects[AttackedId]->GetHp());
 					for (auto id : PlayerList) {
 						Session* Players = reinterpret_cast<Session*>(objects[id]);
-						if(!Players->GetIsNpc())
-							Players->send_hp_change_packet(AttackedId, objects[AttackedId]->GetHp());
+						if (!Players->GetIsNpc())
+							Players->SendHpChangePacket(AttackedId, objects[AttackedId]->GetHp());
 					}
 				}
 				else {
@@ -646,20 +458,20 @@ void Server::WorkerThread()
 						Pos pos;
 						pos.x = rand() % W_WIDTH / 40;
 						pos.y = rand() % W_HEIGHT / 40;
-						if (can_go(pos.x, pos.y)) {
+						if (CanGo(pos.x, pos.y)) {
 							player->SetExp(player->GetExp() / 2);
-							player->send_exp_change_packet();
+							player->SendExpChangePacket();
 							player->SetSpawnPos({ pos.x, pos.y });
 							break;
 						}
- 					}
+					}
 
 					for (auto id : PlayerList) {
 						//std::cout << "플레이어 죽음" << std::endl;
-						player->send_remove_player_packet(id);
+						player->SendRemovePlayerPacket(id);
 						Session* Players = reinterpret_cast<Session*>(objects[id]);
 						if (!Players->GetIsNpc()) {
-							Players->send_remove_player_packet(AttackedId);
+							Players->SendRemovePlayerPacket(AttackedId);
 						}
 					}
 					_timerQueue.AddTaskTimer(AttackedId, -1, EV_RESPAWN, 3000);
@@ -671,19 +483,7 @@ void Server::WorkerThread()
 		}
 		case OP_RESPAWN:
 			if (objects[key]->GetIsNpc()) {
-				Monster* monster = reinterpret_cast<Monster*>(objects[key]);
-				Pos pos = objects[key]->GetSpawnPos();
-				monster->SetPosition(pos.x, pos.y);
-				monster->SetHp(monster->GetMaxHp());
-				SetSectorId(*objects[key], key, pos.x, pos.y);
-
-				std::unordered_set<int> playerList;
-				GetNearPlayersList(key, playerList);
-
-				for (auto playerId : playerList) {
-					Session* player = reinterpret_cast<Session*>(objects[playerId]);
-					player->send_add_player_packet(*objects[key], monster->GetMonsterType());
-				}
+				SpawnMonster(key);
 			}
 			else {
 				Session* player = reinterpret_cast<Session*>(objects[key]);
@@ -695,59 +495,10 @@ void Server::WorkerThread()
 				int sectorId = (pos.x / SECTOR_SIZE) + ((pos.y / SECTOR_SIZE) * MULTIPLY_ROW);
 				sectors[sectorId].AddPlayerList(key);
 
-				player->send_respawn_packet();
+				player->SendRespawnPacket();
 
-				std::unordered_set<int> playerList;
-				int adj_index = 0;
-
-				for (int i = 0; i < ADJ_COUNT; ++i) {
-					adj_index = sectorId - adj_sector[i];
-					if (adj_index < 0 || adj_index > SECTOR_COUNT - 1)
-						continue;
-
-					sectors[adj_index].GetPlayerList(playerList);
-
-					for (auto& pl_id : playerList) {
-						Object& cl = *(objects[pl_id]);
-						{
-							std::lock_guard<std::mutex> ll(cl.GetStateMutex());
-							if (ST_INGAME != cl.GetState()) continue;
-						}
-						if (pl_id == key)
-							continue;
-						if (true == can_see(pl_id, key)) {
-							if (true == cl.GetIsNpc()) {
-								Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
-
-								if (monster->GetIsAgro()) {
-									if (!monster->GetISAIMove()) {
-										OVER_EXP* exover = new OVER_EXP;
-										exover->_comp_type = OP_AI_LUA;
-										exover->_cause_player_id = key;
-										PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
-									}
-								}
-
-								player->send_add_player_packet(cl, monster->GetMonsterType());
-
-								if (false == monster->GetIsActive()) {
-									if (true == monster->CASIsActive(false, true)) {
-										if (monster->GetIsRoaming())
-											_timerQueue.AddTaskTimer(pl_id, -1, EV_RANDOM_MOVE, 1000);
-									}
-									continue;
-								}
-								else {
-									player->send_add_player_packet(cl, monster->GetMonsterType());
-								}
-							}
-							else {
-								player->send_add_player_packet(cl, VI_PLAYER);
-								reinterpret_cast<Session*>(&cl)->send_add_player_packet(*player, VI_PLAYER);
-							}
-						}
-					}
-				}
+				SpawnPlayer(key, sectorId);
+				
 			}
 			delete ex_over;
 			break;
@@ -759,14 +510,14 @@ void Server::WorkerThread()
 
 			Session* player = reinterpret_cast<Session*>(objects[key]);
 			int hp = player->GetHp();
-			player->send_hp_change_packet(key, hp);
+			player->SendHpChangePacket(key, hp);
 
 			std::unordered_set<int> playerList;
 			player->GetRefViewList(playerList);
 
 			for (int id : playerList) {
 				if (!objects[id]->GetIsNpc()) {
-					reinterpret_cast<Session*>(objects[id])->send_hp_change_packet(key, hp);
+					reinterpret_cast<Session*>(objects[id])->SendHpChangePacket(key, hp);
 				}
 			}
 			delete ex_over;
@@ -788,26 +539,26 @@ void Server::disconnect(int key)
 	wchar_t sql[70];
 	std::wstring wStr = converter.from_bytes(logoutPlayer->GetName());
 	Pos pos = logoutPlayer->GetPosition();
-
-	swprintf(sql, 50, L"EXEC logout_user '%s', %d, %d, %d, %d, %d, %d", 
-		wStr.c_str(), pos.x, pos.y, 
+	swprintf(sql, 70, L"EXEC logout_user '%s', %d, %d, %d, %d, %d, %d",
+		wStr.c_str(), pos.x, pos.y,
 		logoutPlayer->GetLevel(), logoutPlayer->GetExp(), logoutPlayer->GetHp(), logoutPlayer->GetPower());
 	_dbQueue.addTaskExecDirect(logoutPlayer, sql, EV_LOGOUT);
 	logoutPlayer->SetName("\n");
 
-	for (auto& id : playerList) {		
+	for (auto& id : playerList) {
 		Session* pl = reinterpret_cast<Session*>(objects[id]);
 		{
 			std::lock_guard<std::mutex> ll(pl->GetStateMutex());
 			if (ST_INGAME != pl->GetState()) continue;
 		}
 		if (pl->GetId() == key) continue;
-		pl->send_remove_player_packet(key);
+		pl->SendRemovePlayerPacket(key);
 	}
 	closesocket(logoutPlayer->GetSocket());
 
 	std::lock_guard<std::mutex> ll(objects[key]->GetStateMutex());
 	objects[key]->SetState(ST_FREE);
+	logoutPlayer->ClearViewList();
 }
 
 void Server::BroadCastChat(int id, char* p)
@@ -821,7 +572,213 @@ void Server::BroadCastChat(int id, char* p)
 	for (int i = 0; i < MAX_USER; ++i) {
 		Session* player = reinterpret_cast<Session*>(objects[i]);
 		if (player->GetState() != ST_INGAME) continue;
-			player->do_send(&chatPacket);
+		player->DoSend(&chatPacket);
+	}
+}
+
+void Server::processAttackRequest(int id, char* packet)
+{
+	Session* player = reinterpret_cast<Session*>(objects[id]);
+	if (std::chrono::system_clock::now() < player->_last_attak_time + std::chrono::milliseconds(ATTACK_RATE))
+		return;
+	player->_last_attak_time = std::chrono::system_clock::now();
+
+	int AttackedId = FindAttackedMonster(id);
+	if (AttackedId == -1)
+		return;
+	Monster* target = reinterpret_cast<Monster*>(objects[AttackedId]);
+
+	int damage = objects[id]->GetPower();
+	bool isSuccess = false;;
+	int remainingHp = target->Damage(damage, isSuccess);
+	if (isSuccess) {
+		// 공격성공
+		std::unordered_set<int> PlayerList;
+		GetNearPlayersList(AttackedId, PlayerList);
+
+		if (remainingHp != 0) {
+			// 죽은건 아니면 체력을 수정
+
+			for (auto id : PlayerList) {
+				Session* Players = reinterpret_cast<Session*>(objects[id]);
+				Players->SendHpChangePacket(AttackedId, target->GetHp());
+			}
+		}
+		else {
+			// 몬스터 죽음 부활
+			_timerQueue.AddTaskTimer(AttackedId, -1, EV_RESPAWN, 30000);
+			// 죽인 플레이어의 경험치 설정
+			if (objects[id]->SetAddExp(target->GetExpOnDeath())) {
+				player->SendLevelChangePacket(id, player->GetLevel(), player->GetExp());
+
+				// 레벨업 뷰리스트에 있는 플레이어에게 보내기
+				std::unordered_set<int> nearPlayer;
+				player->GetRefViewList(nearPlayer);
+				for (auto playerId : nearPlayer) {
+					Session* otherPlayer = reinterpret_cast<Session*>(objects[playerId]);
+					otherPlayer->SendLevelChangePacket(id, player->GetLevel(), player->GetExp());
+				}
+
+			}
+			else {
+				// 경험치만 올리기
+				player->SendExpChangePacket();
+			}
+
+			// 모든 플레이어에게 remove보내기
+			target->SetPosition(-100, -100);
+			for (auto id : PlayerList) {
+				Session* Players = reinterpret_cast<Session*>(objects[id]);
+				Players->SendRemovePlayerPacket(AttackedId);
+			}
+		}
+
+	}
+}
+
+void Server::processSkillRequest(int id, char* packet)
+{
+	int findIds[4]{ -1, -1, -1, -1 };
+	bool isSuccess = FindASkillMonster(id, findIds);
+	if (isSuccess == -1)
+		return;
+
+	for (int i = 0; i < 4; ++i) {
+		if (findIds[i] == -1)
+			continue;
+
+		Session* player = reinterpret_cast<Session*>(objects[id]);
+
+		int damage = objects[id]->GetPower();
+		isSuccess = false;;
+		int remainingHp = objects[findIds[i]]->Damage(damage, isSuccess);
+		if (isSuccess) {
+			// 공격성공
+			std::unordered_set<int> PlayerList;
+			GetNearPlayersList(findIds[i], PlayerList);
+
+			if (remainingHp != 0) {
+				// 죽은건 아니면 체력을 수정
+
+				for (auto id : PlayerList) {
+					Session* Players = reinterpret_cast<Session*>(objects[id]);
+					Players->SendHpChangePacket(findIds[i], objects[findIds[i]]->GetHp());
+				}
+			}
+			else {
+				// 몬스터 죽음 부활
+				Monster* target = reinterpret_cast<Monster*>(objects[findIds[i]]);
+
+				_timerQueue.AddTaskTimer(findIds[i], -1, EV_RESPAWN, 30000);
+				// 죽인 플레이어의 경험치 설정
+				if (objects[id]->SetAddExp(target->GetExpOnDeath())) {
+					player->SendLevelChangePacket(id, player->GetLevel(), player->GetExp());
+
+					// 레벨업 뷰리스트에 있는 플레이어에게 보내기
+					std::unordered_set<int> nearPlayer;
+					player->GetRefViewList(nearPlayer);
+					for (auto playerId : nearPlayer) {
+						Session* otherPlayer = reinterpret_cast<Session*>(objects[playerId]);
+						otherPlayer->SendLevelChangePacket(id, player->GetLevel(), player->GetExp());
+					}
+
+				}
+				else {
+					// 경험치만 올리기
+					player->SendExpChangePacket();
+				}
+
+				// 모든 플레이어에게 remove보내기
+				objects[findIds[i]]->SetPosition(-100, -100);
+				for (auto id : PlayerList) {
+					Session* Players = reinterpret_cast<Session*>(objects[id]);
+					Players->SendRemovePlayerPacket(findIds[i]);
+				}
+			}
+
+		}
+	}
+}
+
+void Server::SpawnPlayer(int key, int sectorId)
+{
+	Session* player = reinterpret_cast<Session*>(objects[key]);
+	std::unordered_set<int> playerList;
+	std::unordered_set<int> monsterList;
+	int index = 0;
+	
+	for (int i = 0; i < NUM_ADJACENT_SECTORS; ++i) {
+		index = sectorId - adjacentSectors[i];
+		if (index < 0 || index > SECTOR_COUNT - 1)
+			continue;
+
+		sectors[index].GetPlayerList(playerList);
+
+		for (auto& pl_id : playerList) {
+			Object& cl = *(objects[pl_id]);
+			{
+				std::lock_guard<std::mutex> ll(cl.GetStateMutex());
+				if (ST_INGAME != cl.GetState()) continue;
+			}
+			if (pl_id == key)
+				continue;
+			if (true == CanSee(pl_id, key)) {
+				if (true == cl.GetIsNpc()) {
+					monsterList.insert(pl_id);
+				}
+				else {
+					player->SendAddPlayerPacket(cl, VI_PLAYER);
+					reinterpret_cast<Session*>(&cl)->SendAddPlayerPacket(*player, VI_PLAYER);
+				}
+			}
+		}
+	}
+
+	// 몬스터 순회//////////////////////////////////////////////////////////////////////////////////////////////////
+	for (auto& mId : monsterList) {
+		Monster* monster = reinterpret_cast<Monster*>(objects[mId]);
+
+		if (true == CanSee(mId, key)) {
+			if (monster->GetIsAgro()) { // 어그로 몬스터 인데 누군가를 따라가고 있지 않다면 Ai 추적을 해야하는지 판단하는 작업 필요
+				if (!monster->GetISAIMove()) {
+					OVER_EXP* exover = new OVER_EXP;
+					exover->_comp_type = OP_CAN_ASTAR; // 이거는 어그로와 공격 그쪽으로 변경
+					exover->_cause_player_id = key;
+					PostQueuedCompletionStatus(_hiocp, 1, mId, &exover->_over);
+				}
+			}
+
+			player->SendAddPlayerPacket(*(objects[mId]), monster->GetMonsterType());
+
+			if (false == monster->GetIsActive()) {
+				if (true == monster->CASIsActive(false, true)) {
+					// 타이머가 호출되고 로밍 몬스터의 경우 영역에서 움직이는거를 루아가 계산한다. 
+					if (monster->GetIsRoaming())
+						_timerQueue.AddTaskTimer(mId, -1, EV_RANDOM_MOVE, 1000);
+				}
+				continue;
+			}
+			else {
+				player->SendAddPlayerPacket(*(objects[mId]), monster->GetMonsterType());
+			}
+		}
+	}
+}
+
+void Server::SpawnMonster(int key)
+{
+	Monster* monster = reinterpret_cast<Monster*>(objects[key]);
+	Pos pos = objects[key]->GetSpawnPos();
+	monster->SetPosition(pos.x, pos.y);
+	monster->SetHp(monster->GetMaxHp());
+	SetSectorId(*objects[key], key, pos.x, pos.y);
+
+	std::unordered_set<int> playerList;
+	GetNearPlayersList(key, playerList);
+
+	for (auto playerId : playerList) {
+		Session* player = reinterpret_cast<Session*>(objects[playerId]);
+		player->SendAddPlayerPacket(*objects[key], monster->GetMonsterType());
 	}
 }
 
@@ -836,7 +793,7 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 	case DIR_LEFT: if (x > 0) x--; break;
 	case DIR_RIGHT: if (x < W_WIDTH - 1) x++; break;
 	}
-	if (!can_go(x, y)) {
+	if (!CanGo(x, y)) {
 		return;
 	}
 	//std::cout << "CS_MOVE " << x << y << "\n";
@@ -846,37 +803,37 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 	sectors;
 	int sectorId = SetSectorId(*movePlayer, id, x, y);
 
-	std::unordered_set<int> old_vl;
-	movePlayer->GetRefViewList(old_vl);
-	std::unordered_set<int> new_vl;
+	std::unordered_set<int> oldViewList;
+	movePlayer->GetRefViewList(oldViewList);
+	std::unordered_set<int> newViewList;
 
 	std::unordered_set<int> playerList;
-	int adj_index = 0;
-	for (int i = 0; i < ADJ_COUNT; ++i)
+	int index = 0;
+	for (int i = 0; i < NUM_ADJACENT_SECTORS; ++i)
 	{
-		adj_index = sectorId - adj_sector[i];
-		if (adj_index < 0 || adj_index > SECTOR_COUNT - 1)
+		index = sectorId + adjacentSectors[i];
+		if (index < 0 || index > SECTOR_COUNT - 1)
 			continue;
 
-		sectors[adj_index].GetPlayerList(playerList);
+		sectors[index].GetPlayerList(playerList);
 
-		for (auto& pl_id : playerList) {
-			Object& cl = *(objects[pl_id]);
+		for (auto& otherId : playerList) {
+			Object& object = *(objects[otherId]);
 
-			if (cl.GetState() != ST_INGAME) continue;
-			if (pl_id == id) continue;
-			if (true == can_see(pl_id, id)) {
-				new_vl.insert(pl_id);
-				if ((true == cl.GetIsNpc())) {
-					Monster* monster = reinterpret_cast<Monster*>(objects[pl_id]);
+			if (object.GetState() != ST_INGAME) continue;
+			if (otherId == id) continue;
+			if (true == CanSee(otherId, id)) {
+				newViewList.insert(otherId);
+				if ((true == object.GetIsNpc())) {
+					Monster* monster = reinterpret_cast<Monster*>(objects[otherId]);
 
 					// 어그로 몬스터의 레이더 검사
 					if (monster->GetIsAgro()) {
 						if (!monster->GetISAIMove()) {
 							OVER_EXP* exover = new OVER_EXP;
-							exover->_comp_type = OP_AI_LUA;
+							exover->_comp_type = OP_CAN_ASTAR;
 							exover->_cause_player_id = id;
-							PostQueuedCompletionStatus(_hiocp, 1, pl_id, &exover->_over);
+							PostQueuedCompletionStatus(_hiocp, 1, otherId, &exover->_over);
 						}
 					}
 
@@ -884,56 +841,55 @@ void Server::process_move(Session* movePlayer, int id, char direction)
 					if (false == monster->GetIsActive()) {
 						bool input = false;
 						if (true == monster->CASIsActive(false, true))
-							if(monster->GetIsRoaming())
-									_timerQueue.AddTaskTimer(pl_id, -1, EV_RANDOM_MOVE, 1000);
+							if (monster->GetIsRoaming())
+								_timerQueue.AddTaskTimer(otherId, -1, EV_RANDOM_MOVE, 1000);
 					}
 				}
 			}
 		}
 	}
 
-	movePlayer->send_move_packet(*(objects[id]), direction);
-	// ADD_PLAYER
-	for (auto& cl : new_vl) {
+	movePlayer->SendMovePacket(*(objects[id]), direction);
+
+	for (auto& cl : newViewList) {
 		Session* addPlayer = reinterpret_cast<Session*>(objects[cl]);
-		char c_visual = VI_PLAYER;
-		if (0 == old_vl.count(cl)) {
+		char visual = VI_PLAYER;
+		if (0 == oldViewList.count(cl)) {
 			if (false == addPlayer->GetIsNpc()) {
-				addPlayer->send_add_player_packet(*(objects[id]), VI_PLAYER);
+				addPlayer->SendAddPlayerPacket(*(objects[id]), VI_PLAYER);
 			}
 			else {
 				Monster* monster = reinterpret_cast<Monster*>(objects[cl]);
-				c_visual = monster->GetMonsterType();
+				visual = monster->GetMonsterType();
 			}
 
-			movePlayer->send_add_player_packet(*(objects[cl]), c_visual);
+			movePlayer->SendAddPlayerPacket(*(objects[cl]), visual);
 		}
 		else {
-			// MOVE_PLAYER
 			if (false == addPlayer->GetIsNpc()) {
-				addPlayer->send_move_packet(*(objects[id]), direction);
+				addPlayer->SendMovePacket(*(objects[id]), direction);
 			}
 		}
 	}
-	// REMOVE_PLAYER
-	for (auto& cl : old_vl) {
-		if (0 == new_vl.count(cl)) {
+
+	for (auto& cl : oldViewList) {
+		if (0 == newViewList.count(cl)) {
 			if (false == objects[cl]->GetIsNpc()) {
 				Session* removePlayer = reinterpret_cast<Session*>(objects[cl]);
-				removePlayer->send_remove_player_packet(id);
+				removePlayer->SendRemovePlayerPacket(id);
 			}
-			movePlayer->send_remove_player_packet(cl);
+			movePlayer->SendRemovePlayerPacket(cl);
 		}
 	}
 }
 
 void Server::GetNearPlayersList(int id, std::unordered_set<int>& list)
-{ 
+{
 	std::unordered_set<int> playerList;
-	int adj_index = objects[id]->GetSectorId();
-	for (int i = 0; i < ADJ_COUNT; ++i)
+	int SectorId = objects[id]->GetSectorId();
+	for (int i = 0; i < NUM_ADJACENT_SECTORS; ++i)
 	{
-		int index = adj_index - adj_sector[i];
+		int index = SectorId - adjacentSectors[i];
 		if (index < 0 || index > SECTOR_COUNT - 1)
 			continue;
 
@@ -943,7 +899,7 @@ void Server::GetNearPlayersList(int id, std::unordered_set<int>& list)
 			Object* s = reinterpret_cast<Session*>(objects[p]);
 			if (s->GetIsNpc()) continue;
 			if (s->GetState() != ST_INGAME) continue;
-			if (can_see(s->GetId(), id))
+			if (CanSee(s->GetId(), id))
 				list.insert(s->GetId());
 		}
 	}
@@ -964,6 +920,42 @@ int Server::SetSectorId(Object& obj, int id, int x, int y)
 	return sectorId;
 }
 
+bool Server::processLoginRequest(int id, char* packet)
+{
+	CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
+	Session* loginPlayer = reinterpret_cast<Session*>(objects[id]);
+
+	for (auto player : objects) {
+		char* name = player->GetName();
+		if (strncmp(p->name, name, strlen(p->name) + 1) == 0) {
+			loginPlayer->SendLoginFailPacket();
+			return false;
+		}
+	}
+
+	objects[id]->SetName(p->name);
+	wchar_t sqlQuery[100];
+	std::wstring convertedName = converter.from_bytes(p->name);
+	swprintf(sqlQuery, 100, L"EXEC select_user '%s'", convertedName.c_str());
+	_dbQueue.addTaskExecDirect(reinterpret_cast<Session*>(objects[id]), sqlQuery, EV_LOGIN);
+
+	return true;
+}
+
+void Server::processMoveRequest(int id, char* packet)
+{
+	CS_MOVE_PACKET* p = reinterpret_cast<CS_MOVE_PACKET*>(packet);
+
+	Session* movePlayer = reinterpret_cast<Session*>(objects[id]);
+	if (std::chrono::system_clock::now() < movePlayer->_last_move_time + std::chrono::milliseconds(MOVE_RATE))
+		return;
+
+	movePlayer->_last_move_time = std::chrono::system_clock::now();
+
+	movePlayer->_last_move_time_stress_test = p->moveTime;
+	process_move(movePlayer, id, p->direction);
+}
+
 void Server::AStar(int& x, int& y, int id)
 {
 	//std::cout << "Astar\n";
@@ -976,7 +968,7 @@ void Server::AStar(int& x, int& y, int id)
 
 	Monster* monster = reinterpret_cast<Monster*>(objects[id]);
 	Pos startPos = monster->GetPosition();
-	int target = monster->GerTarget(); 
+	int target = monster->GerTarget();
 	if (target == -1) {
 		x = startPos.x;
 		y = startPos.y;
@@ -1050,7 +1042,7 @@ void Server::AStar(int& x, int& y, int id)
 			if (nextPos.y + indexOffset.y < 0 || nextPos.y + indexOffset.y >= size)
 				continue;
 
-			if (can_go(nextPos.x, nextPos.y) == false)
+			if (CanGo(nextPos.x, nextPos.y) == false)
 				continue;
 
 			int g = node.g + cost[dir];
@@ -1124,7 +1116,7 @@ int Server::FindAttackedMonster(int id)
 			continue;
 		Pos pos2 = objects[objectId]->GetPosition();
 
-		if(playerPos + moveDir[dir] == pos2){
+		if (playerPos + moveDir[dir] == pos2) {
 			return objectId;
 		}
 	}
@@ -1165,17 +1157,18 @@ bool Server::FindASkillMonster(int id, int* ids)
 			isFInd = true;
 		}
 	}
-	if(isFInd)
+	if (isFInd)
 		return true;
 	return false;
 }
 
-int Server::get_new_client_id()
+int Server::GetNewClientId()
 {
 	for (int i = 0; i < MAX_USER; ++i) {
-		std::lock_guard<std:: mutex> ll{ objects[i]->GetStateMutex() };
-		if (objects[i]->GetState() == ST_FREE)
+		std::lock_guard<std::mutex> ll{ objects[i]->GetStateMutex() };
+		if (objects[i]->GetState() == ST_FREE) {
 			return i;
+		}
 	}
 	return -1;
 }

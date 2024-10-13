@@ -5,6 +5,7 @@
 #include "Timer.h"
 #include "DB.h"
 
+
 int main()
 {
 	std::wcout.imbue(std::locale("korean"));
